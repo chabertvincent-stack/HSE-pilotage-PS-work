@@ -456,7 +456,7 @@ function removeRegulatoryReferences(v){
   s=s.replace(/\bArrêté\s+du\s+\d{1,2}\/\d{1,2}\/\d{4}(?:-\d+)?\b/gi,'');
   return s.replace(/^\d{1,3}\s*:\s*/,'').replace(/\s+/g,' ').replace(/\s+([,.;:])/g,'$1').trim();
 }
-function cleanHumanText(v){return removeRegulatoryReferences(v).replace(/^[:\-–—.\s]+|[:\-–—.\s]+$/g,'').replace(/\s+/g,' ').trim()}
+function cleanHumanText(v){return removeRegulatoryReferences(String(v||'').replace(/[\uE000-\uF8FF]/g,' ').replace(/(^|\s)[üØ§»](?=\s|$)/g,' ')).replace(/^[:\-–—.\s]+|[:\-–—.\s]+$/g,'').replace(/\s+/g,' ').trim()}
 function cleanLocationText(v){
   let s=String(v||'').replace(/\s+/g,' ').trim();
   const m=s.match(/^PROFILS\s+SYSTEMES\s*(?:\(([^)]+)\))?\s*(.*)$/i);
@@ -541,7 +541,7 @@ function fallbackVgpDetection(fullText,pages){
 function recommendAction(ctx){const x=String(ctx||'').toLowerCase();if(/remplacer|réparer/.test(x))return'Appliquer la préconisation du rapport et remettre l’équipement en conformité.';if(/rétablir|remettre à niveau|y remédier|corriger/.test(x))return'Réaliser la remise en conformité demandée par le rapport.';if(/réviser|contrôler|vérifier/.test(x))return'Faire réaliser le contrôle ou la révision prévue et conserver la preuve.';if(/installer|mettre en place/.test(x))return'Mettre en place le dispositif demandé et conserver la preuve.';return'Traiter la non-conformité selon la préconisation du rapport et conserver la preuve de clôture.'}
 
 /* ---------- MOTEUR IA VGP V2 : lecture documentaire, indépendante du format ---------- */
-function aiDefaultSettings(){return{enabled:false,provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-2.5-flash',apiKey:'',timeout:90000,chunkPages:5,visionFallback:false}}
+function aiDefaultSettings(){return{enabled:false,provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-3.8-flash',apiKey:'',timeout:90000,chunkPages:5,visionFallback:false}}
 function aiSettingsSafe(){return{...aiDefaultSettings(),...(aiSettings||{})}}
 function splitAiDocument(pageTexts,maxPages=5,overlap=1){
   const pages=Array.isArray(pageTexts)?pageTexts.map(String):[];const chunks=[];let start=0;
@@ -599,7 +599,23 @@ function aiOrientationPrompt(reportFamily,firstPages){return `Tu dois d'abord co
 function aiChunkPrompt(orientation,chunk,expectedRange){return `CONTEXTE DE STRUCTURE DU RAPPORT : ${JSON.stringify(orientation)}\n\nAnalyse intégralement les pages ${expectedRange}. Cherche toutes les observations/actionnables sur ces pages, y compris si une observation commence sur une page et se termine sur la suivante. Utilise le numéro de page fourni dans le texte.\n\n${chunk}`}
 function aiConsolidationPrompt(orientation,candidates,baselineCount){return `Tu es le contrôleur qualité final d'une extraction de rapport VGP. Voici la règle de structure comprise du document : ${JSON.stringify(orientation)}\nLa pré-analyse indépendante a détecté ${baselineCount} élément(s) structuré(s). Ce nombre est seulement un contrôle, pas une limite.\n\nLes candidats IA proviennent de blocs de pages avec chevauchement. Tu dois :\n- conserver toute observation réellement distincte ;\n- fusionner uniquement un doublon évident issu du chevauchement des pages ;\n- ne jamais fusionner deux observations différentes parce qu'elles ont la même action ;\n- compléter/corriger lieu, équipement, constat, action, numéro et nouveauté lorsque le document le permet ;\n- supprimer seulement les faux positifs manifestes (référence réglementaire seule, exemple, page de garde, sommaire, contrôle conforme, sans objet sans action) ;\n- restituer la liste complète, sans plafond de quantité.\n\nRetour JSON uniquement : {"findings":[...],"total":N,"quality_notes":"..."}\n\nCANDIDATS :\n${JSON.stringify(candidates)}`}
 async function fetchWithTimeout(url,options,ms){const controller=new AbortController();const t=setTimeout(()=>controller.abort(),ms);try{return await fetch(url,{...options,signal:controller.signal})}catch(e){if(e?.name==='AbortError')throw new Error(`Délai dépassé (${Math.round(ms/1000)} s)`);throw e}finally{clearTimeout(t)}}
+let AI_RETRY_DELAYS=[3000,6000,12000,20000];
+function aiShowStatus(msg){const el=document.getElementById('aiActionStatus')||document.getElementById('aiReportStatus');if(el)el.textContent=msg}
 async function callAiEndpointV2(prompt,opts={}){
+  let lastErr;
+  for(let attempt=0;attempt<=AI_RETRY_DELAYS.length;attempt++){
+    try{return await callAiEndpointOnce(prompt,opts)}
+    catch(e){
+      lastErr=e;const m=String(e?.message||e);
+      const transient=[429,500,502,503,504].includes(e?.status)||/high demand|overloaded|unavailable|try again|temporar|rate limit|resource.?exhausted|Délai dépassé|Failed to fetch|Load failed|NetworkError/i.test(m);
+      if(!transient||attempt>=AI_RETRY_DELAYS.length)break;
+      const wait=AI_RETRY_DELAYS[attempt];aiShowStatus(`Gemini est surchargé — nouvelle tentative ${attempt+1}/${AI_RETRY_DELAYS.length} dans ${Math.round(wait/1000)} s…`);
+      await new Promise(r=>setTimeout(r,wait));
+    }
+  }
+  throw lastErr;
+}
+async function callAiEndpointOnce(prompt,opts={}){
   const cfg=aiSettingsSafe();const endpoint=String(opts.endpoint||cfg.endpoint||'').trim(),model=String(opts.model||cfg.model||'').trim();if(!endpoint||!model)throw new Error('Endpoint ou modèle IA manquant.');
   const provider=opts.provider||cfg.provider||'ollama';const headers={'Content-Type':'application/json'};if(cfg.apiKey&&provider==='gemini')headers['x-goog-api-key']=cfg.apiKey;else if(cfg.apiKey&&provider!=='ollama')headers.Authorization=`Bearer ${cfg.apiKey}`;
   let body,url=endpoint;
@@ -611,7 +627,7 @@ async function callAiEndpointV2(prompt,opts={}){
   else if(provider==='responses')body={model,input:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}]};
   else body={model,messages:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}],temperature:0,stream:false};
   const res=await fetchWithTimeout(url,{method:'POST',headers,body:JSON.stringify(body)},Number(cfg.timeout)||90000);let data=null;let textBody='';try{data=await res.json()}catch{try{textBody=await res.text()}catch{}}
-  if(!res.ok){const msg=data?.error?.message||data?.error||textBody||`HTTP ${res.status}`;throw new Error(String(msg).slice(0,500))}
+  if(!res.ok){const msg=data?.error?.message||data?.error||textBody||`HTTP ${res.status}`;{const err=new Error(String(msg).slice(0,500));err.status=res.status;throw err}}
   return data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||data?.choices?.[0]?.message?.content||data?.message?.content||data?.response||data?.output_text||data?.output?.flatMap?.(x=>x.content||[]).map?.(x=>x.text||'').join?.('')||'';
 }
 async function testAiV2(){
@@ -620,7 +636,7 @@ async function testAiV2(){
   if(!endpoint||!model)return showAiDiagnostic('err','Renseigne l’endpoint et le modèle avant le test.');
   aiSettings={...aiSettings,enabled:true,provider,endpoint,model,apiKey};sessionStorage.setItem('sgeAiSessionKey',apiKey);
   if(btn){btn.disabled=true;btn.textContent='⏳ Test en cours…'}
-  try{const reply=await callAiEndpointV2('Réponds uniquement par OK.',{provider,endpoint,model,plain:true});showAiDiagnostic('ok',`Connexion IA réussie. Réponse reçue : ${String(reply||'OK').slice(0,120)}`);saveAiSettings(false)}catch(e){showAiDiagnostic('err',`Échec de connexion IA : ${e?.message||e}. Pour Ollama local, il faut qu’Ollama soit démarré et autorise les requêtes depuis le navigateur.`)}finally{if(btn){btn.disabled=false;btn.textContent='Tester la connexion IA'}}
+  try{const reply=await callAiEndpointV2('Réponds uniquement par OK.',{provider,endpoint,model,plain:true});showAiDiagnostic('ok',`Connexion IA réussie. Réponse reçue : ${String(reply||'OK').slice(0,120)}`);saveAiSettings(false)}catch(e){showAiDiagnostic('err',`Échec de connexion IA : ${e?.message||e}. ${provider==='gemini'?'Vérifie la clé et le nom du modèle (ex. gemini-3.8-flash).':'Pour Ollama local, il faut qu’Ollama soit démarré et autorise les requêtes depuis le navigateur.'}`)}finally{if(btn){btn.disabled=false;btn.textContent='Tester la connexion IA'}}
 }
 function showAiDiagnostic(kind,msg){const el=document.getElementById('aiDiagnostic');if(el){el.className=`ai-diag ${kind||''}`;el.textContent=msg}}
 async function analyzeWithAiEngine(reportId){
@@ -633,20 +649,20 @@ async function analyzeWithAiEngine(reportId){
     let orientation={report_family:family,observation_pattern:'à déterminer',action_pattern:'à déterminer',novelty_rule:'',layout_notes:''};
     try{const orientReply=await callAiEndpointV2(aiOrientationPrompt(family,first));const orientJson=extractJsonObject(orientReply);if(orientJson&&typeof orientJson==='object')orientation={...orientation,...orientJson}}catch(e){r.ai.orientationWarning=e.message||String(e)}
     r.ai.orientation=orientation;
-    const chunks=splitAiDocument(r.ai.pageTexts,Math.max(3,Math.min(8,Number(cfg.chunkPages)||5)),1),all=[];
+    const chunks=splitAiDocument(r.ai.pageTexts,Math.max(3,Math.min(8,Number(cfg.chunkPages)||5)),1),all=[];const failedChunks=[];let lastChunkErr=null;
     for(let i=0;i<chunks.length;i++){
       const c=chunks[i];r.ai.status=`Lecture IA du rapport : bloc ${i+1}/${chunks.length} — pages ${c.start+1} à ${c.end}`;saveDB();render();
-      const reply=await callAiEndpointV2(aiChunkPrompt(orientation,c.text,`${c.start+1} à ${c.end}`));const found=parseAiFindings(reply);for(const f of found)all.push({...f,chunkIndex:i,origin:'ai'});
+      try{const reply=await callAiEndpointV2(aiChunkPrompt(orientation,c.text,`${c.start+1} à ${c.end}`));const found=parseAiFindings(reply);for(const f of found)all.push({...f,chunkIndex:i,origin:'ai'})}catch(e){failedChunks.push(`pages ${c.start+1}-${c.end}`);lastChunkErr=e}
     }
-    const cleaned=dedupeAiCandidates(all);r.ai.aiRawCandidates=cleaned;
+    if(failedChunks.length===chunks.length)throw lastChunkErr||new Error('Analyse IA impossible.');const cleaned=dedupeAiCandidates(all);r.ai.aiRawCandidates=cleaned;
     r.ai.status=`Vérification croisée de ${cleaned.length} proposition(s)…`;saveDB();render();
     let final=cleaned;
     if(cleaned.length){
       const compact=cleaned.map((x,i)=>({id:i,page:x.page,observation_number:x.reportObservationNo||'',novelty:x.observationKind||'',location:x.location||'',equipment:x.equipment||'',finding:x.description||x.title||'',action:x.action||'',evidence:x.sourceQuote||''}));
-      const consolidation=await callAiEndpointV2(aiConsolidationPrompt(orientation,compact,r.ai.structuredCount||0));const cf=parseAiFindings(consolidation);if(cf.length)final=dedupeAiCandidates(cf);
+      try{const consolidation=await callAiEndpointV2(aiConsolidationPrompt(orientation,compact,r.ai.structuredCount||0));const cf=parseAiFindings(consolidation);if(cf.length>=Math.max(1,Math.floor(cleaned.length*.7)))final=dedupeAiCandidates(cf)}catch(e){console.warn('consolidation ignorée',e)}
     }
     const structured=extractVgpObservationSummary(r.ai.rawText,r.ai.pageTexts||[],r.ai.observationMarkers||{}).candidates.map(x=>({...x,origin:'structured'}));
-    r.ai.structuredCount=structured.length;r.ai.candidates=mergeAiAndStructured(structured,final);r.ai.aiCount=final.length;r.ai.status=`Analyse IA terminée : ${r.ai.candidates.length} proposition(s). IA : ${final.length}. Vérification structurée : ${structured.length}.`;r.ai.aiFinishedAt=new Date().toISOString();saveDB();toast(`Analyse IA terminée : ${r.ai.candidates.length} proposition(s).`);
+    r.ai.structuredCount=structured.length;r.ai.candidates=final.length?final:structured;r.ai.aiCount=final.length;r.ai.status=`Analyse IA terminée : ${r.ai.candidates.length} proposition(s)${failedChunks.length?` — ⚠ ${failedChunks.length} bloc(s) en échec (${failedChunks.join(', ')}) : relance l’analyse pour les compléter`:''}.`;r.ai.aiFinishedAt=new Date().toISOString();saveDB();toast(`Analyse IA terminée : ${r.ai.candidates.length} proposition(s).`);
   }finally{aiBusy=false;saveDB();render()}
 }
 function dedupeAiCandidates(items){
@@ -875,7 +891,7 @@ function settingsPage(el){
   </div>
   <div class="card" style="margin-top:16px"><h2>Réinitialisation</h2><div class="notice red">Cette action efface uniquement les données locales de cette application.</div><button class="btn danger" onclick="resetAll()">Effacer les données locales</button></div>`;
 }
-function aiProviderChanged(p){const ep=document.getElementById('aiEndpoint'),md=document.getElementById('aiModel');if(p==='gemini'){ep.value='https://generativelanguage.googleapis.com/v1beta';md.value='gemini-2.5-flash'}else if(p==='ollama'){ep.value='http://127.0.0.1:11434/api/chat';md.value='llama3.2'}}
+function aiProviderChanged(p){const ep=document.getElementById('aiEndpoint'),md=document.getElementById('aiModel');if(p==='gemini'){ep.value='https://generativelanguage.googleapis.com/v1beta';md.value='gemini-3.8-flash'}else if(p==='ollama'){ep.value='http://127.0.0.1:11434/api/chat';md.value='llama3.2'}}
 window.aiProviderChanged=aiProviderChanged;
 function toggleAiExternal(enabled){aiSettings={...aiSettings,enabled:Boolean(enabled)};db.aiSettings={enabled:aiSettings.enabled,provider:aiSettings.provider,endpoint:aiSettings.endpoint,model:aiSettings.model,timeout:aiSettings.timeout,chunkPages:aiSettings.chunkPages,visionFallback:aiSettings.visionFallback};saveDB();const el=document.getElementById('aiDiagnostic');if(el)el.textContent=aiSettings.enabled?'IA activée.':'IA désactivée.';toast(aiSettings.enabled?'IA activée.':'IA désactivée.');}
 function saveAiSettings(preserveKey=true){
@@ -884,7 +900,7 @@ function saveAiSettings(preserveKey=true){
     aiSettings={...aiSettings,enabled,provider,endpoint,model,chunkPages,timeout,apiKey};db.aiSettings={enabled,provider,endpoint,model,timeout,chunkPages,visionFallback:Boolean(aiSettings.visionFallback)};saveDB();sessionStorage.setItem('sgeAiSessionKey',preserveKey?apiKey:'');showAiDiagnostic('ok','Configuration IA enregistrée dans l’application. La clé API reste uniquement dans la session.');toast('Configuration IA enregistrée.');
   }catch(e){console.error(e);showAiDiagnostic('err','Impossible d’enregistrer la configuration IA.')}
 }
-function loadAiSettings(){try{const src=db?.aiSettings||JSON.parse(localStorage.getItem('sgeAiSettings')||'null')||{};aiSettings={...aiDefaultSettings(),...src,apiKey:sessionStorage.getItem('sgeAiSessionKey')||''}}catch(e){console.warn('Chargement configuration IA impossible',e);aiSettings=aiDefaultSettings()}}
+function loadAiSettings(){try{const src=db?.aiSettings||JSON.parse(localStorage.getItem('sgeAiSettings')||'null')||{};if(src&&/^gemini-(?:1\.|2\.)/.test(String(src.model||'')))src.model='gemini-3.8-flash';aiSettings={...aiDefaultSettings(),...src,apiKey:sessionStorage.getItem('sgeAiSessionKey')||''}}catch(e){console.warn('Chargement configuration IA impossible',e);aiSettings=aiDefaultSettings()}}
 async function testAi(){return testAiV2()}
 
 function addUnit(){const v=document.getElementById('unitNew').value.trim();if(v&&!db.workUnits.includes(v)){db.workUnits.push(v);saveDB();render()}}
