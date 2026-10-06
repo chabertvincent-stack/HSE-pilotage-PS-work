@@ -115,9 +115,27 @@ tr:last-child td{border-bottom:0}.empty{text-align:center;padding:35px;color:var
 <div id="modalRoot"></div>
 <div id="toast" class="toast"></div>
 
-<script type="module">
-const PDFJS_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs';
-const PDF_WORKER_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs';
+<script>
+const PDFJS_SOURCES=[
+  {lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'},
+  {lib:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',worker:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'}
+];
+let __pdfjsPromise=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(__pdfjsPromise)return __pdfjsPromise;
+  __pdfjsPromise=(async()=>{
+    let lastErr;
+    for(const src of PDFJS_SOURCES){
+      try{
+        await new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src=src.lib;sc.onload=ok;sc.onerror=()=>ko(new Error('chargement '+src.lib+' impossible'));document.head.appendChild(sc)});
+        if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc=src.worker;return window.pdfjsLib}
+      }catch(e){lastErr=e}
+    }
+    __pdfjsPromise=null;throw lastErr||new Error('pdf.js introuvable');
+  })();
+  return __pdfjsPromise;
+}
 
 const MODULES=[
   {id:'vgp',name:'VGP & conformité',icon:'⚙'},
@@ -359,6 +377,18 @@ function setupDropzone(reportId){
   ['dragleave','drop'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove('drag')}));
   d.addEventListener('drop',ev=>{const f=ev.dataTransfer.files?.[0];if(f)readPdfIntoReport(f,reportId)});
 }
+async function quickImportPdf(ev){
+  const f=ev.target.files?.[0];ev.target.value='';if(!f)return;
+  if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){toast('Choisis un fichier PDF.');return}
+  const base=f.name.replace(/\.pdf$/i,'');const low=base.toLowerCase();
+  const t=db.vgpTypes.find(x=>low.includes(String(x.code||'').toLowerCase())||low.includes(String(x.key||'').toLowerCase()))||db.vgpTypes[0];
+  const r={id:uid('VGP'),created:new Date().toISOString(),vgpKey:t?.key,reportNumber:base,equipment:base,location:'À compléter',organism:'',inspection:now(),next:t?reportNext(t,now()):'',status:'À traiter',notes:'Créé par import PDF',ai:null};
+  db.vgpReports.push(r);saveDB();openReport(r.id);
+  await readPdfIntoReport(f,r.id);
+  const cfg=aiSettingsSafe();
+  if(cfg.enabled&&(cfg.provider==='ollama'||cfg.apiKey)){try{await runCompleteAi(r.id)}catch(e){console.error(e)}}
+  else toast('PDF lu. Active l’IA et ajoute ta clé dans Paramètres pour lancer l’analyse.');
+}
 async function handlePdfInput(ev,id){const f=ev.target.files?.[0];if(f)await readPdfIntoReport(f,id)}
 function visualTextFromItems(items){
   const rows=[];
@@ -387,10 +417,10 @@ async function detectObservationMarkersFromPdf(pdf,startIndex){
   return markers;
 }
 async function readPdfIntoReport(file,id){
-  if(file.type!=='application/pdf'){toast('Choisis un fichier PDF.');return}
+  if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name||'')){toast('Choisis un fichier PDF.');return}
   const el=document.getElementById('aiReportStatus');if(el)el.textContent='Lecture du PDF en cours…';
   try{
-    const pdfjs=await import(PDFJS_URL);pdfjs.GlobalWorkerOptions.workerSrc=PDF_WORKER_URL;const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf}).promise;let text='';let pageTexts=[];
+    const pdfjs=await loadPdfJs();const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf}).promise;let text='';let pageTexts=[];
     for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);const tc=await pg.getTextContent();const pt=visualTextFromItems(tc.items);pageTexts.push(pt);text+=`\n\n--- PAGE ${p} ---\n${pt}`}
     const recapStart=findRecapStartPage(pageTexts), observationMarkers=await detectObservationMarkersFromPdf(pdf,recapStart);const r=db.vgpReports.find(x=>x.id===id);if(!r)return;
     r.ai={...(r.ai||{}),fileName:file.name,pages:pdf.numPages,rawText:text,textPreview:text.slice(0,5000),pageTexts,observationMarkers,parsedAt:new Date().toISOString(),status:'PDF lu localement — prêt pour analyse'};saveDB();render();toast(`${pdf.numPages} page(s) lue(s).`);
@@ -624,7 +654,7 @@ function dedupeAiCandidates(items){
   for(const raw of items||[]){const x=normalizeFindingForApp(raw);if(!x.description&&!x.action)continue;let dup=false;for(const y of out){const obs=x.reportObservationNo&&y.reportObservationNo&&String(x.reportObservationNo)===String(y.reportObservationNo);const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>.75||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>.93;if(obs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push({...x,id:uid('AIC'),origin:'ai'})}return out}
 function mergeAiAndStructured(structured,aiFound){
   const out=[];const usedAi=new Set();
-  for(const b0 of structured||[]){const b=normalizeFindingForApp({...b0,id:uid('AIC'),origin:'structured'});let best=-1,score=0;for(let i=0;i<(aiFound||[]).length;i++){if(usedAi.has(i))continue;const a=aiFound[i];const obs=b.reportObservationNo&&a.reportObservationNo&&String(b.reportObservationNo)===String(a.reportObservationNo)?1:0;const page=String(b.page||'')===String(a.page||'')?.25:0;const loc=similarity(b.location,a.location)*.2;const core=similarity((b.description||'')+' '+(b.action||''),(a.description||'')+' '+(a.action||''))*.55;const sc=obs*.7+page+loc+core;if(sc>score){best=i;score=sc}}if(best>=0&&score>=.6){const a=aiFound[best];usedAi.add(best);out.push(normalizeFindingForApp({...b,description:a.description||b.description,action:a.action||b.action,location:a.location||b.location,equipment:a.equipment||b.equipment,observationKind:a.observationKind||b.observationKind,sourceQuote:a.sourceQuote||b.sourceQuote,confidence:Math.max(Number(a.confidence||0),Number(b.confidence||0)),origin:'ai-review'}))}else out.push(b)}
+  for(const b0 of structured||[]){const b=normalizeFindingForApp({...b0,id:uid('AIC'),origin:'structured'});let best=-1,score=0;for(let i=0;i<(aiFound||[]).length;i++){if(usedAi.has(i))continue;const a=aiFound[i];const obs=b.reportObservationNo&&a.reportObservationNo&&String(b.reportObservationNo)===String(a.reportObservationNo)?1:0;const page=String(b.page||'')===String(a.page||'')?.25:0;const loc=similarity(b.location,a.location)*.2;const core=similarity((b.description||'')+' '+(b.action||''),(a.description||'')+' '+(a.action||''))*.55;const sc=obs*.7+page+loc+core;if(sc>score){best=i;score=sc}}if(best>=0&&score>=.6){const a=aiFound[best];usedAi.add(best);out.push(normalizeFindingForApp({...b,description:a.description||b.description,action:a.action||b.action,location:a.location||b.location,equipment:a.equipment||b.equipment,observationKind:a.observationKind||b.observationKind,sourceQuote:a.sourceQuote||b.sourceQuote,confidence:Math.max(Number(a.confidence||0),Number(b.confidence||0)),origin:'ai-review'}))}else{const core=x=>(x.description||'')+' '+(x.action||'')+' '+(x.equipment||'');const coveredByAi=(aiFound||[]).some(a=>similarity(core(b),core(a))>=.3);if(!coveredByAi)out.push(b)}}
   for(let i=0;i<(aiFound||[]).length;i++)if(!usedAi.has(i))out.push(normalizeFindingForApp({...aiFound[i],origin:'ai-added'}));
   return out;
 }
