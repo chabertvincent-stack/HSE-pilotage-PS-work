@@ -399,16 +399,145 @@ async function analyzePdfDirect(id){
   const r=db.vgpReports.find(x=>String(x.id)===String(id));if(!r||aiBusy)return;
   const file=__pdfFiles[id];
   if(!file){toast('Choisis d’abord le PDF du rapport.');document.getElementById('reportPdfInput')?.click();return}
-  if(file.size>18*1024*1024){toast('PDF trop lourd (max 18 Mo) pour l’analyse IA directe.');return}
-  aiBusy=true;r.ai={...(r.ai||{}),status:'⏳ L’IA lit le PDF… (30 à 90 s, ne quitte pas la page)'};saveDB();render();
+  if(file.size>50*1024*1024){toast('PDF trop lourd (maximum Gemini : 50 Mo).');return}
+
+  aiBusy=true;
+  r.ai={...(r.ai||{}),fileName:file.name,status:'⏳ Préparation du rapport et contrôle de complétude…'};
+  saveDB();render();
+
   try{
-    const buf=new Uint8Array(await file.arrayBuffer());let bin='';for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
-    const reply=await callAiEndpointV2('Lis ce rapport de vérification PDF EN ENTIER (toutes les pages, tableaux, légendes, pastilles et images) et extrais toutes les non-conformités selon les règles. Réponds uniquement avec le JSON demandé.',{pdfBase64:btoa(bin)});
-    const found=dedupeAiCandidates(parseAiFindings(reply).map(f=>({...f,chunkIndex:0,origin:'ai'}))).map(c=>({...c,confidence:.9}));
-    r.ai={...r.ai,candidates:found,aiCount:found.length,aiFinishedAt:new Date().toISOString(),status:found.length?`✓ ${found.length} non-conformité(s) détectée(s). Vérifie puis ajoute au plan.`:'Aucune non-conformité détectée dans ce PDF.'};
+    /*
+     * 1) Lecture locale du PDF.
+     * Elle sert uniquement de filet de sécurité pour les rapports dont le
+     * tableau récapitulatif est exploitable (Q18 notamment).
+     */
+    if(!r.ai?.pageTexts?.length){
+      await readPdfIntoReport(file,id);
+    }
+    const local=extractVgpObservationSummary(r.ai?.rawText||'',r.ai?.pageTexts||[],r.ai?.observationMarkers||{});
+    const structured=(local.candidates||[]).map(x=>({...x,origin:'structured'}));
+    r.ai.structuredCount=structured.length;
+
+    /*
+     * 2) Gemini reçoit le PDF ORIGINAL, pas seulement le texte extrait.
+     * Cela conserve tableaux, couleurs, légendes, images et mise en page.
+     */
+    r.ai.status=`⏳ Gemini analyse le PDF complet…${structured.length?` (${structured.length} observation(s) de contrôle détectée(s) localement)` :''}`;
+    saveDB();render();
+
+    const buf=new Uint8Array(await file.arrayBuffer());
+    let bin='';
+    for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
+    const baseline=structured.map(x=>({
+      observation_number:x.reportObservationNo||'',
+      page:x.page||'',
+      location:x.location||'',
+      equipment:x.equipment||'',
+      finding:x.description||'',
+      action:x.action||''
+    }));
+
+    const prompt=`Analyse ce rapport VGP PDF EN ENTIER, page par page, comme un contrôleur qualité d'extraction.
+
+OBJECTIF PRINCIPAL : produire la liste COMPLETE des non-conformités / observations donnant lieu à une action.
+
+RÈGLES ABSOLUES :
+1. Ne fixe AUCUN nombre maximum de NC.
+2. Compte d'abord toutes les observations distinctes du rapport, puis produis UNE ligne JSON par observation.
+3. Deux observations ayant la même action mais un lieu, matériel ou numéro différent restent DEUX observations.
+4. Conserve le numéro d'observation du rapport lorsqu'il existe.
+5. Conserve la vraie page PDF.
+6. Sépare toujours : location = zone/localisation ; equipment = matériel ou repère ; finding = constat ; action = action corrective.
+7. Ne mets jamais une référence réglementaire dans finding ou action.
+8. Conserve "Nouvelle observation" / "Ancienne observation" / "Récurrente" uniquement si le document permet réellement de le déterminer.
+9. Lis aussi les tableaux, légendes, couleurs, symboles et images : ils peuvent porter le numéro ou le caractère nouveau/récurrent.
+10. Ne fusionne jamais deux observations distinctes.
+11. N'invente aucune information absente.
+12. Si le rapport possède une "Liste récapitulative des observations", utilise-la comme référence de complétude, mais vérifie les détails dans les pages concernées.
+13. Avant de répondre, vérifie que le nombre de lignes retournées correspond au nombre d'observations distinctes réellement présentes. Si tu as un doute, conserve l'observation plutôt que de la supprimer.
+
+RÉSULTAT JSON :
+{
+  "findings":[
+    {
+      "page":2,
+      "observation_number":"1",
+      "novelty":"Nouvelle observation",
+      "location":"Zone / bâtiment / local complet",
+      "equipment":"Matériel ou repère",
+      "finding":"Constat court et fidèle au rapport",
+      "action":"Action corrective du rapport",
+      "priority":"Normale",
+      "evidence":"Preuve courte tirée du rapport"
+    }
+  ],
+  "total_observations_detected":19,
+  "pages_covered":[2,3,4,5],
+  "notes":""
+}
+
+POINT DE CONTRÔLE LOCAL (ce n'est PAS une limite et il peut être incomplet) :
+${JSON.stringify(baseline)}`;
+
+    const reply=await callAiEndpointV2(prompt,{
+      pdfBase64:btoa(bin),
+      responseSchema:geminiFindingResponseSchema()
+    });
+
+    const parsed=extractJsonObject(reply)||{};
+    let found=dedupeAiCandidates(parseAiFindings(reply).map(f=>({...f,chunkIndex:0,origin:'ai'})))
+      .map(c=>({...c,confidence:.92}));
+    let aiTotal=Number(parsed.total_observations_detected||parsed.total||0);
+
+    /*
+     * 3) Si Gemini annonce plus d'observations qu'il n'en a sorties,
+     * on lui demande uniquement les manquantes. Ce second appel n'est
+     * déclenché qu'en cas de signal d'incomplétude.
+     */
+    if(aiTotal>found.length){
+      r.ai.status=`⚠ Gemini a compté ${aiTotal} observation(s) mais n'en a détaillé que ${found.length} — recherche des manquantes…`;
+      saveDB();render();
+      const already=found.map(x=>({
+        observation_number:x.reportObservationNo||'',
+        page:x.page||'',
+        location:x.location||'',
+        equipment:x.equipment||'',
+        finding:x.description||'',
+        action:x.action||''
+      }));
+      try{
+        const missingReply=await callAiEndpointV2(`Relis le PDF ORIGINAL. Première extraction : ${found.length}. Le contrôle de comptage indique ${aiTotal} observation(s). Cherche UNIQUEMENT les observations distinctes manquantes. Ne répète aucune observation déjà listée ci-dessous. Si le numéro d'observation existe, utilise-le. Réponds uniquement avec le même JSON structuré.\n\nOBSERVATIONS DÉJÀ TROUVÉES :\n${JSON.stringify(already)}`,{
+          pdfBase64:btoa(bin),
+          responseSchema:geminiFindingResponseSchema()
+        });
+        const missing=dedupeAiCandidates(parseAiFindings(missingReply).map(f=>({...f,origin:'ai-added'})));
+        found=dedupeAiCandidates([...found,...missing]);
+      }catch(e){console.warn('Contrôle de complétude Gemini ignoré',e)}
+    }
+
+    /*
+     * 4) Fusion sans perte : le tableau structuré local reste présent même
+     * si Gemini en a oublié une partie ; Gemini enrichit les lignes et ajoute
+     * les observations que le moteur local ne sait pas lire.
+     */
+    const merged=mergeAiAndStructured(structured,found);
+    r.ai={
+      ...r.ai,
+      candidates:merged,
+      aiCount:found.length,
+      aiReportedTotal:aiTotal,
+      aiFinishedAt:new Date().toISOString(),
+      status:`✓ ${merged.length} non-conformité(s) préparée(s)${structured.length?` — ${structured.length} issue(s) du contrôle de complétude du rapport`:''}. Vérifie puis ajoute au plan.`
+    };
+    saveDB();
     toast(r.ai.status);
-  }catch(e){console.error(e);r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e.message||e}`};toast('Erreur IA : '+(e.message||e))}
-  finally{aiBusy=false;saveDB();render()}
+  }catch(e){
+    console.error(e);
+    r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e.message||e}`};
+    toast('Erreur IA : '+(e.message||e));
+  }finally{
+    aiBusy=false;saveDB();render();
+  }
 }
 async function quickImportPdf(ev){
   const f=ev.target.files?.[0];ev.target.value='';if(!f)return;
@@ -550,7 +679,7 @@ function extractVgpObservationSummary(fullText,pageTexts,observationMarkers){
 }
 function tokenSet(v){return new Set(String(v||'').toLowerCase().split(/[^a-zà-ÿ0-9]+/i).filter(w=>w.length>2))}
 function similarity(a,b){const A=tokenSet(a),B=tokenSet(b);if(!A.size||!B.size)return 0;let n=0;for(const x of A)if(B.has(x))n++;return n/(A.size+B.size-n)}
-function dedupeFindings(items){const out=[];for(const raw of items||[]){const x=normalizeFindingForApp(raw);let dup=false;for(const y of out){const samePage=String(x.page||'')===String(y.page||'');const sameObs=x.reportObservationNo&&y.reportObservationNo&&String(x.reportObservationNo)===String(y.reportObservationNo);const sameLoc=similarity(x.location,y.location)>=.8||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>=.94;if(sameObs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push(x)}return out}
+function dedupeFindings(items){const out=[];for(const raw of items||[]){const x=normalizeFindingForApp(raw);let dup=false;for(const y of out){const hasObs=x.reportObservationNo&&y.reportObservationNo;const sameObs=hasObs&&String(x.reportObservationNo)===String(y.reportObservationNo);const differentObs=hasObs&&String(x.reportObservationNo)!==String(y.reportObservationNo);if(differentObs)continue;const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>=.8||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>=.94;if(sameObs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push(x)}return out}
 function guessPriority(x){const s=[x?.title,x?.description,x?.action].join(' ').toLowerCase();if(/urgence|masse sous tension|absence de protection|sans protection|choc électrique|risque immédiat|danger imminent/.test(s))return'Critique';if(/éclairage de sécurité|pouvoir de coupure|surcharge|protection|défaut|non.?conforme|anomalie/.test(s))return'Haute';return'Normale'}
 function buildSourceQuote(meta,action){return[meta?.location,meta?.equipment,meta?.issue,`(P) ${action}`].filter(Boolean).join(' — ').replace(/\s+/g,' ').trim()}
 function isHeaderNoise(v){return !v||/^(nouvelle observation|préconisation|références réglementaires|action)$/i.test(v)||v.length<4}
@@ -668,13 +797,42 @@ async function geminiFallbackModels(cfg){
   }
   return __geminiModelCache;
 }
+function geminiFindingResponseSchema(){
+  return {
+    type:'object',
+    properties:{
+      findings:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            page:{type:'integer'},
+            observation_number:{type:'string'},
+            novelty:{type:'string'},
+            location:{type:'string'},
+            equipment:{type:'string'},
+            finding:{type:'string'},
+            action:{type:'string'},
+            priority:{type:'string'},
+            evidence:{type:'string'}
+          },
+          required:['page','observation_number','novelty','location','equipment','finding','action','priority','evidence']
+        }
+      },
+      total_observations_detected:{type:'integer'},
+      pages_covered:{type:'array',items:{type:'integer'}},
+      notes:{type:'string'}
+    },
+    required:['findings','total_observations_detected','pages_covered','notes']
+  };
+}
 async function callAiEndpointOnce(prompt,opts={}){
   const cfg=aiSettingsSafe();const endpoint=String(opts.endpoint||cfg.endpoint||'').trim(),model=String(opts.model||cfg.model||'').trim();if(!endpoint||!model)throw new Error('Endpoint ou modèle IA manquant.');
   const provider=opts.provider||cfg.provider||'ollama';const headers={'Content-Type':'application/json'};if(cfg.apiKey&&provider==='gemini')headers['x-goog-api-key']=cfg.apiKey;else if(cfg.apiKey&&provider!=='ollama')headers.Authorization=`Bearer ${cfg.apiKey}`;
   let body,url=endpoint;
   if(provider==='gemini'){
     url=endpoint.replace(/\/+$/,'').replace(/\/models\/.*$/,'')+`/models/${encodeURIComponent(model)}:generateContent`;
-    body={systemInstruction:{parts:[{text:aiSystemPrompt()}]},contents:[{role:'user',parts:[...(opts.pdfBase64?[{inlineData:{mimeType:'application/pdf',data:opts.pdfBase64}}]:[]),{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:32768,...(opts.plain?{}:{responseMimeType:'application/json'})}};
+    body={systemInstruction:{parts:[{text:aiSystemPrompt()}]},contents:[{role:'user',parts:[...(opts.pdfBase64?[{inlineData:{mimeType:'application/pdf',data:opts.pdfBase64}}]:[]),{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:32768,...(opts.plain?{}:{responseMimeType:'application/json',...(opts.responseSchema?{responseSchema:opts.responseSchema}:{})})}};
   }
   else if(provider==='ollama')body={model,messages:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}],stream:false,options:{temperature:0}};
   else if(provider==='responses')body={model,input:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}]};
@@ -715,17 +873,54 @@ async function analyzeWithAiEngine(reportId){
       try{const consolidation=await callAiEndpointV2(aiConsolidationPrompt(orientation,compact,r.ai.structuredCount||0));const cf=parseAiFindings(consolidation);if(cf.length>=Math.max(1,Math.floor(cleaned.length*.7)))final=dedupeAiCandidates(cf)}catch(e){console.warn('consolidation ignorée',e)}
     }
     const structured=extractVgpObservationSummary(r.ai.rawText,r.ai.pageTexts||[],r.ai.observationMarkers||{}).candidates.map(x=>({...x,origin:'structured'}));
-    r.ai.structuredCount=structured.length;r.ai.candidates=final.length?final:structured;r.ai.aiCount=final.length;r.ai.status=`Analyse IA terminée : ${r.ai.candidates.length} proposition(s)${failedChunks.length?` — ⚠ ${failedChunks.length} bloc(s) en échec (${failedChunks.join(', ')}) : relance l’analyse pour les compléter`:''}.`;r.ai.aiFinishedAt=new Date().toISOString();saveDB();toast(`Analyse IA terminée : ${r.ai.candidates.length} proposition(s).`);
+    r.ai.structuredCount=structured.length;r.ai.candidates=mergeAiAndStructured(structured,final);r.ai.aiCount=final.length;r.ai.status=`Analyse IA terminée : ${r.ai.candidates.length} proposition(s)${failedChunks.length?` — ⚠ ${failedChunks.length} bloc(s) en échec (${failedChunks.join(', ')}) : relance l’analyse pour les compléter`:''}.`;r.ai.aiFinishedAt=new Date().toISOString();saveDB();toast(`Analyse IA terminée : ${r.ai.candidates.length} proposition(s).`);
   }finally{aiBusy=false;saveDB();render()}
 }
 function dedupeAiCandidates(items){
   const out=[];
-  for(const raw of items||[]){const x=normalizeFindingForApp(raw);if(!x.description&&!x.action)continue;let dup=false;for(const y of out){const obs=x.reportObservationNo&&y.reportObservationNo&&String(x.reportObservationNo)===String(y.reportObservationNo);const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>.75||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>.93;if(obs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push({...x,id:uid('AIC'),origin:'ai'})}return out}
+  for(const raw of items||[]){const x=normalizeFindingForApp(raw);if(!x.description&&!x.action)continue;let dup=false;for(const y of out){const hasObs=x.reportObservationNo&&y.reportObservationNo;const obs=hasObs&&String(x.reportObservationNo)===String(y.reportObservationNo);const differentObs=hasObs&&String(x.reportObservationNo)!==String(y.reportObservationNo);if(differentObs)continue;const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>.75||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>.93;if(obs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push({...x,id:uid('AIC'),origin:'ai'})}return out}
 function mergeAiAndStructured(structured,aiFound){
+  /*
+   * Le principe important ici : l'extraction locale sert de filet de sécurité.
+   * Une NC trouvée dans le tableau récapitulatif ne doit JAMAIS disparaître
+   * simplement parce que Gemini en a retourné moins.
+   */
   const out=[];const usedAi=new Set();
-  for(const b0 of structured||[]){const b=normalizeFindingForApp({...b0,id:uid('AIC'),origin:'structured'});let best=-1,score=0;for(let i=0;i<(aiFound||[]).length;i++){if(usedAi.has(i))continue;const a=aiFound[i];const obs=b.reportObservationNo&&a.reportObservationNo&&String(b.reportObservationNo)===String(a.reportObservationNo)?1:0;const page=String(b.page||'')===String(a.page||'')?.25:0;const loc=similarity(b.location,a.location)*.2;const core=similarity((b.description||'')+' '+(b.action||''),(a.description||'')+' '+(a.action||''))*.55;const sc=obs*.7+page+loc+core;if(sc>score){best=i;score=sc}}if(best>=0&&score>=.6){const a=aiFound[best];usedAi.add(best);out.push(normalizeFindingForApp({...b,description:a.description||b.description,action:a.action||b.action,location:a.location||b.location,equipment:a.equipment||b.equipment,observationKind:a.observationKind||b.observationKind,sourceQuote:a.sourceQuote||b.sourceQuote,confidence:Math.max(Number(a.confidence||0),Number(b.confidence||0)),origin:'ai-review'}))}else{const core=x=>(x.description||'')+' '+(x.action||'')+' '+(x.equipment||'');const coveredByAi=(aiFound||[]).some(a=>similarity(core(b),core(a))>=.3);if(!coveredByAi)out.push(b)}}
-  for(let i=0;i<(aiFound||[]).length;i++)if(!usedAi.has(i))out.push(normalizeFindingForApp({...aiFound[i],origin:'ai-added'}));
-  return out;
+  for(const b0 of structured||[]){
+    const b=normalizeFindingForApp({...b0,id:uid('AIC'),origin:'structured'});
+    let best=-1,score=0;
+    for(let i=0;i<(aiFound||[]).length;i++){
+      if(usedAi.has(i))continue;
+      const a=aiFound[i];
+      const obs=b.reportObservationNo&&a.reportObservationNo&&String(b.reportObservationNo)===String(a.reportObservationNo)?1:0;
+      const page=String(b.page||'')===String(a.page||'')?.25:0;
+      const loc=similarity(b.location,a.location)*.2;
+      const core=similarity((b.description||'')+' '+(b.action||''),(a.description||'')+' '+(a.action||''))*.55;
+      const sc=obs*.7+page+loc+core;
+      if(sc>score){best=i;score=sc}
+    }
+    if(best>=0&&score>=.6){
+      const a=aiFound[best];usedAi.add(best);
+      out.push(normalizeFindingForApp({
+        ...b,
+        description:a.description||b.description,
+        action:a.action||b.action,
+        location:a.location||b.location,
+        equipment:a.equipment||b.equipment,
+        observationKind:a.observationKind||b.observationKind,
+        sourceQuote:a.sourceQuote||b.sourceQuote,
+        confidence:Math.max(Number(a.confidence||0),Number(b.confidence||0)),
+        origin:'ai-review'
+      }));
+    }else{
+      /* Ne jamais supprimer le candidat structuré : c'est notre filet anti-oubli. */
+      out.push(b);
+    }
+  }
+  for(let i=0;i<(aiFound||[]).length;i++){
+    if(!usedAi.has(i))out.push(normalizeFindingForApp({...aiFound[i],origin:'ai-added'}));
+  }
+  return dedupeFindings(out);
 }
 async function runCompleteAi(reportId){
   const status=document.getElementById('aiActionStatus');const btn=document.getElementById('completeAiBtn');if(status)status.textContent='Analyse IA documentaire en cours…';if(btn){btn.disabled=true;btn.textContent='⏳ Lecture IA…'}
