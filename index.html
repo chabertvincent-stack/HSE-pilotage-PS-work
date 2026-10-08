@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173b32">
+<title>SGE HSE — VGP & Risque chimique</title>
+<style>
+:root{
+  --nav:#173b32;--nav2:#245747;--bg:#f3f6f5;--card:#fff;--ink:#182824;
+  --muted:#667873;--line:#dce5e1;--accent:#25815e;--warn:#c27b14;--red:#b83b3b;
+  --blue:#356bb3;--purple:#6852b5;--radius:16px
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.shell{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+.sidebar{background:var(--nav);color:#fff;padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font-size:20px;font-weight:850;padding:8px 12px 20px}.brand small{display:block;font-size:10px;font-weight:600;opacity:.7;letter-spacing:1.5px;margin-top:4px}
+.navbtn{display:flex;gap:12px;align-items:center;width:100%;border:0;background:transparent;color:#dce9e3;padding:13px 12px;border-radius:11px;text-align:left;margin:3px 0}
+.navbtn:hover,.navbtn.active{background:#ffffff20;color:#fff}.navbtn .ico{width:25px;text-align:center;font-size:18px}
+.sidefoot{font-size:11px;color:#bad0c6;margin:20px 12px}
+.main{min-width:0}.topbar{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
+.topbar strong{font-size:18px}.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.content{padding:26px;max-width:1600px;margin:auto}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:20px}.pagehead h1{margin:0;font-size:28px}.muted{color:var(--muted)}.small{font-size:12px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;color:var(--ink);font-weight:700}
+.btn:hover{background:#f7faf8}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{filter:brightness(.96)}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{color:var(--red)}.btn.sm{font-size:12px;padding:6px 9px}
+.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:18px}.two{grid-template-columns:1.2fr .8fr}.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:19px;min-width:0;box-shadow:0 2px 8px #18392b05}
+.stat-label{color:var(--muted);font-size:13px}.stat-value{font-size:29px;font-weight:850;margin:7px 0 3px}.stat-foot{font-size:12px;color:var(--muted)}
+h2{font-size:18px;margin:0 0 14px}h3{font-size:15px;margin:0 0 8px}
+.pill{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;background:#eaf2ee;color:#27644d;white-space:nowrap}
+.pill.red{background:#fde9e7;color:#a12e2a}.pill.orange{background:#fff1d9;color:#88540a}.pill.blue{background:#e8f0fc;color:#2d5d9a}.pill.purple{background:#eeeafd;color:#5742a5}.pill.gray{background:#edf0ef;color:#56645f}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f7faf8;color:#60716b;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+tr:last-child td{border-bottom:0}.empty{text-align:center;padding:35px;color:var(--muted)}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{max-width:280px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.field label{font-size:12px;font-weight:800;color:#52645d}.checkbox-label{display:flex!important;align-items:center;gap:8px;cursor:pointer}.checkbox-label input[type=checkbox]{width:18px!important;height:18px!important;min-width:18px;padding:0!important;margin:0;accent-color:var(--accent)}
+.field input,.field select,.field textarea,input,select,textarea{border:1px solid #ccd8d2;border-radius:9px;padding:10px;background:#fff;color:var(--ink);width:100%}
+.field textarea{min-height:92px;resize:vertical}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.span2{grid-column:1/-1}
+.form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:15px}.stack{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.notice{padding:12px 14px;border-radius:11px;background:#fff5df;color:#765016;font-size:13px;margin-bottom:14px}.notice.green{background:#e8f4ed;color:#235d43}.notice.blue{background:#e8f0fc;color:#2d5d9a}.notice.red{background:#fde9e7;color:#8e302b}
+.overlay{position:fixed;inset:0;background:#0b211bb0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px}.modal{background:#fff;border-radius:17px;width:min(980px,100%);max-height:94vh;overflow:auto;padding:23px;box-shadow:0 20px 80px #0003}
+.modalhead{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:17px}.modalhead h2{margin:0}.x{border:0;background:#eef2ef;border-radius:50%;width:34px;height:34px;font-size:20px}
+.mobile-menu{display:none}
+.progress{height:10px;background:#e9efec;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:var(--accent)}
+.kpi-list{display:grid;gap:9px}.kpi-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line)}.kpi-row:last-child{border-bottom:0}
+.family-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.family-card{cursor:pointer;position:relative;transition:.15s}.family-card:hover{transform:translateY(-2px);border-color:#9bbdaf}
+.family-icon{width:56px;height:56px;border-radius:15px;display:grid;place-items:center;font-size:29px;background:linear-gradient(135deg,#eef7f2,#dfece6);margin-bottom:11px}
+.family-card h3{font-size:16px}.family-card .meta{color:var(--muted);font-size:12px}.family-foot{margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
+.breadcrumb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:#f7faf8;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;color:#47625a}
+.chip.click{cursor:pointer}.chip.click:hover{border-color:#9bbdaf;background:#eef6f2}
+.page-actions{display:flex;gap:7px;flex-wrap:wrap}.page-actions .btn{white-space:nowrap}
+.report-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.ai-panel{border:1px solid #cfd9f2;background:#f7f9ff;border-radius:15px;padding:15px}
+.ai-title{display:flex;align-items:center;gap:9px;font-weight:850}.ai-orb{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#6357cb,#7b6ef0);color:#fff;display:grid;place-items:center}
+.ai-status{font-size:12px;color:#5867a2;margin-top:4px}.ai-diag{padding:10px 12px;border:1px solid #dfe5f5;border-radius:11px;background:#fbfcff;margin-top:10px;font-size:12px}.ai-diag.ok{background:#eef8f2;border-color:#cfe5d8;color:#2d694f}.ai-diag.err{background:#fff0ee;border-color:#f0cbc5;color:#934039}.ai-progress{margin-top:8px;height:7px;background:#e9edf7;border-radius:99px;overflow:hidden}.ai-progress span{display:block;height:100%;background:#6757c7;transition:width .2s}.dropzone{border:2px dashed #cbd6d1;border-radius:13px;padding:17px;text-align:center;background:#fbfcfb}
+.dropzone.drag{border-color:var(--accent);background:#edf9f2}
+.ai-result{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;margin-top:12px}.ai-finding{border:1px solid var(--line);border-radius:11px;padding:11px;margin:8px 0;background:#fff}
+.ai-finding-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.ai-confidence{font-size:10px;font-weight:900;border-radius:999px;padding:4px 7px;background:#eeeafd;color:#5742a5;white-space:nowrap}
+.finding-open td:first-child{border-left:4px solid var(--red)}.finding-progress td:first-child{border-left:4px solid var(--warn)}.finding-closed td:first-child{border-left:4px solid var(--accent)}
+.overdue{color:var(--red);font-weight:850}.soon{color:#9a6410;font-weight:850}.ok{color:#2b6f55;font-weight:850}
+.detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.detail-box{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#f8faf9}.detail-box .label{color:var(--muted);font-size:11px}.detail-box b{display:block;margin-top:2px}
+.plan-table{min-width:1050px}
+.chemical-summary{grid-template-columns:repeat(5,minmax(0,1fr))}
+.chem-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}.chem-tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;font-weight:800}.chem-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.unit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:9px;border:1px solid var(--line);border-radius:10px;background:#f9fbfa;max-height:190px;overflow:auto}.unit-grid label{display:flex;gap:7px;align-items:center;padding:7px;border:1px solid #edf1ef;border-radius:8px;background:#fff;font-size:12px}.unit-grid input{width:auto}
+.hazard-stack{display:flex;gap:5px;flex-wrap:wrap}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:850;background:#eef0ff;color:#4e4ba3}.badge.red{background:#fde9e7;color:#a12e2a}.badge.orange{background:#fff1d9;color:#88540a}.badge.blue{background:#e8f0fc;color:#2d5d9a}.badge.gray{background:#edf0ef;color:#56645f}
+.fds-ok{color:#2b6f55;font-weight:850}.fds-soon{color:#9a6410;font-weight:850}.fds-late{color:var(--red);font-weight:850}.fds-missing{color:#88540a;font-weight:850}
+.help{font-size:12px;color:var(--muted);line-height:1.45}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:22px 0 10px}.section-head h2{margin:0}
+.tag{display:inline-block;font-size:10px;font-weight:850;border-radius:7px;padding:3px 6px;background:#edf0ef;color:#56645f}.tag.ai{background:#eeeafd;color:#5742a5}.tag.man{background:#e8f0fc;color:#2d5d9a}
+.file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}.file-row:last-child{border-bottom:0}
+.hidden{display:none!important}.nowrap{white-space:nowrap}
+.settings-card{max-width:850px}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0;border-bottom:1px solid var(--line)}.switch-row:last-child{border-bottom:0}
+.switch{position:relative;width:48px;height:26px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#cdd7d2;border-radius:99px;transition:.2s}.slider:before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:var(--accent)}.switch input:checked+.slider:before{transform:translateX(22px)}
+.toast{position:fixed;right:18px;bottom:18px;z-index:40;background:#163c31;color:#fff;padding:12px 15px;border-radius:11px;box-shadow:0 10px 40px #0003;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}
+@media(max-width:1150px){.stats,.chemical-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-grid{grid-template-columns:1fr}.detail-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){
+  .shell{display:block}.sidebar{position:fixed;z-index:30;left:-100%;top:0;width:82vw;max-width:310px;height:100dvh;transition:left .2s;padding-top:calc(20px + env(safe-area-inset-top))}.sidebar.open{left:0;box-shadow:0 0 0 100vmax #0007}
+  .mobile-menu{display:inline-flex}.topbar{height:60px;padding:calc(env(safe-area-inset-top)) 12px 0}.topbar strong{font-size:16px}.top-actions .hide-mobile{display:none}
+  .content{padding:14px 12px calc(28px + env(safe-area-inset-bottom))}.pagehead{flex-direction:column}.pagehead h1{font-size:23px}.page-actions{width:100%}.page-actions .btn{flex:1}
+  .stats,.chemical-summary{grid-template-columns:1fr 1fr}.family-grid{grid-template-columns:1fr}.two,.three{grid-template-columns:1fr}
+  .formgrid{grid-template-columns:1fr}.span2{grid-column:auto}.detail-grid{grid-template-columns:1fr 1fr}
+  .toolbar input,.toolbar select{max-width:none;flex:1;min-width:140px}.modal{padding:17px}.overlay{padding:0;align-items:flex-end}.overlay .modal{width:100%;max-height:94dvh;border-radius:18px 18px 0 0}
+  .modalhead{position:sticky;top:0;background:#fff;z-index:2;padding:13px 0 9px;border-bottom:1px solid var(--line)}
+  .unit-grid{grid-template-columns:1fr}.report-grid{gap:12px}.dropzone{padding:14px}.tablewrap.m-cards{overflow:visible;border:0;background:transparent}.tablewrap.m-cards table,.tablewrap.m-cards tbody{display:block;min-width:0;width:100%}
+  .tablewrap.m-cards thead{display:none}.tablewrap.m-cards tr{display:block;border:1px solid var(--line);border-radius:12px;padding:4px 12px;margin-bottom:10px;background:#fff}.tablewrap.m-cards td{display:block;border-bottom:1px dashed var(--line);padding:8px 0}.tablewrap.m-cards td:last-child{border-bottom:0}.tablewrap.m-cards td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:850;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+}
+</style>
+<style>@media(max-width:900px){.ai-first{order:-1}}</style></head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">◆ SGE HSE<small>VGP • RISQUE CHIMIQUE • IA</small></div>
+    <nav id="nav"></nav>
+    <div class="sidefoot">Prototype autonome • données stockées dans ce navigateur<br>Export / import JSON disponible</div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:11px">
+        <button class="btn mobile-menu" onclick="toggleMenu()">☰</button>
+        <strong id="topTitle">VGP & conformité</strong>
+      </div>
+      <div class="top-actions">
+        <button class="btn hide-mobile" onclick="exportJSON()">⇩ Export</button>
+        <button class="btn primary" onclick="quickNew()">＋ Nouvelle saisie</button>
+      </div>
+    </header>
+    <div class="content" id="app"></div>
+  </main>
+</div>
+<div id="modalRoot"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const PDFJS_SOURCES=[
+  {lib:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'},
+  {lib:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',worker:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'}
+];
+let __pdfjsPromise=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(__pdfjsPromise)return __pdfjsPromise;
+  __pdfjsPromise=(async()=>{
+    let lastErr;
+    for(const src of PDFJS_SOURCES){
+      try{
+        await new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src=src.lib;sc.onload=ok;sc.onerror=()=>ko(new Error('chargement '+src.lib+' impossible'));document.head.appendChild(sc)});
+        if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc=src.worker;return window.pdfjsLib}
+      }catch(e){lastErr=e}
+    }
+    __pdfjsPromise=null;throw lastErr||new Error('pdf.js introuvable');
+  })();
+  return __pdfjsPromise;
+}
+
+const MODULES=[
+  {id:'vgp',name:'VGP & conformité',icon:'⚙'},
+  {id:'chemical',name:'Risque chimique',icon:'⚗'},
+  {id:'settings',name:'Paramètres / données',icon:'⚙'}
+];
+
+const VGP_DEFAULTS=[
+  {key:'Q18',code:'Q18',name:'Électricité',icon:'⚡',desc:'Vérification électrique',periodicityMonths:12,alertDays:30},
+  {key:'Q19',code:'Q19',name:'Thermographie',icon:'🌡️',desc:'Thermographie infrarouge',periodicityMonths:12,alertDays:30},
+  {key:'LEVAGE',code:'LEVAGE',name:'Appareils de levage',icon:'🏗️',desc:'Vérifications périodiques des appareils de levage',periodicityMonths:12,alertDays:30},
+  {key:'PORTES',code:'PORTES',name:'Portes / portails / portes souples',icon:'🚪',desc:'Vérifications des portes, portails et portes souples',periodicityMonths:12,alertDays:30}
+];
+
+let current='vgp';
+let vgpView={view:'home',typeKey:'',reportId:''};
+let chemicalTab='products';
+let aiSettings={enabled:true,endpoint:'http://localhost:11434/v1/chat/completions',model:'llama3.2'};
+let aiBusy=false;
+let db=loadDB();
+
+function now(){return new Date().toISOString().slice(0,10)}
+function addMonths(iso,n){const d=new Date(String(iso)+'T00:00:00');if(Number.isNaN(d.getTime()))return '';d.setMonth(d.getMonth()+Number(n||0));return d.toISOString().slice(0,10)}
+function addYears(iso,n){return addMonths(iso,Number(n||0)*12)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2400)}
+function saveDB(){localStorage.setItem('sgeHseVgpChemicalDB',JSON.stringify(db))}
+function loadDB(){
+  try{
+    const x=JSON.parse(localStorage.getItem('sgeHseVgpChemicalDB')||'null')||{};
+    const types=Array.isArray(x.vgpTypes)&&x.vgpTypes.length?x.vgpTypes:VGP_DEFAULTS;
+    return {
+      vgpTypes:types.map(t=>({...t,periodicityMonths:Number(t.periodicityMonths)||12,alertDays:Number(t.alertDays)||30})),
+      vgpEquipment:Array.isArray(x.vgpEquipment)?x.vgpEquipment:[],
+      vgpReports:Array.isArray(x.vgpReports)?x.vgpReports:[],
+      vgpFindings:Array.isArray(x.vgpFindings)?x.vgpFindings:[],
+      chemicalProducts:Array.isArray(x.chemicalProducts)?x.chemicalProducts:[],
+      chemicalRequests:Array.isArray(x.chemicalRequests)?x.chemicalRequests:[],
+      chemicalActions:Array.isArray(x.chemicalActions)?x.chemicalActions:[],
+      workUnits:Array.isArray(x.workUnits)?x.workUnits:[],
+      personnel:Array.isArray(x.personnel)?x.personnel:[],
+      chemicalSettings:x.chemicalSettings||{fdsAgeYears:5,alertMonths:6},
+      aiSettings:x.aiSettings||null
+    };
+  }catch{return {vgpTypes:VGP_DEFAULTS,vgpEquipment:[],vgpReports:[],vgpFindings:[],chemicalProducts:[],chemicalRequests:[],chemicalActions:[],workUnits:[],personnel:[],chemicalSettings:{fdsAgeYears:5,alertMonths:6}}}
+}
+
+function nav(){
+  document.getElementById('nav').innerHTML=MODULES.map(m=>`<button class="navbtn ${current===m.id?'active':''}" onclick="go('${m.id}')"><span class="ico">${m.icon}</span><span>${m.name}</span></button>`).join('');
+  document.getElementById('topTitle').textContent=MODULES.find(x=>x.id===current)?.name||'SGE HSE';
+}
+function go(id){current=id;document.getElementById('sidebar').classList.remove('open');nav();render()}
+function toggleMenu(){document.getElementById('sidebar').classList.toggle('open')}
+function render(){nav();const el=document.getElementById('app');if(current==='vgp')return vgpPage(el);if(current==='chemical')return chemicalPage(el);settingsPage(el)}
+
+function quickNew(){
+  if(current==='vgp'){
+    const t=db.vgpTypes[0];
+    openReportForm(null,t?.key);
+  } else if(current==='chemical') openChemicalForm();
+  else importJSON();
+}
+
+function allTypes(){return db.vgpTypes}
+function vgpType(key){return allTypes().find(x=>x.key===key)||{key,code:key,name:key,icon:'⚙',desc:'',periodicityMonths:12,alertDays:30}}
+function reportsForType(key){return db.vgpReports.filter(r=>(r.vgpKey||r.reportType)===key)}
+function equipmentForType(key){return db.vgpEquipment.filter(e=>e.vgpKey===key)}
+function findingsForReport(reportId){return db.vgpFindings.filter(f=>f.reportId===reportId)}
+function findingStatus(f){
+  if(f.status==='Clôturée'||f.status==='Annulée')return f.status;
+  if(f.due && f.due<now())return 'Délai dépassé';
+  return f.status||'À traiter'
+}
+function dueState(date,alertDays=30){
+  if(!date)return {key:'none',label:'Non renseignée',className:'muted'};
+  if(date<now())return {key:'late',label:'Échéance dépassée',className:'overdue'};
+  const soon=addMonths(now,0);
+  const lim=new Date();lim.setDate(lim.getDate()+Number(alertDays||30));
+  if(new Date(date+'T00:00:00')<=lim)return {key:'soon',label:'Échéance proche',className:'soon'};
+  return {key:'ok',label:'À jour',className:'ok'}
+}
+function reportNext(t,inspection){return inspection?addMonths(inspection,t.periodicityMonths):''}
+function reportYear(r){return String(r.inspection||r.created||now()).slice(0,4)}
+function vgpStats(){
+  const f=db.vgpFindings;
+  const open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length;
+  const closed=f.filter(x=>findingStatus(x)==='Clôturée').length;
+  const overdue=f.filter(x=>findingStatus(x)==='Délai dépassé').length;
+  const reports=db.vgpReports.length;
+  const equipments=db.vgpEquipment.length;
+  const dueSoon=db.vgpEquipment.filter(e=>dueState(e.nextDue,vgpType(e.vgpKey).alertDays).key==='soon').length;
+  const dueLate=db.vgpEquipment.filter(e=>dueState(e.nextDue,vgpType(e.vgpKey).alertDays).key==='late').length;
+  return {open,closed,overdue,reports,equipments,dueSoon,dueLate,totalFindings:f.length}
+}
+function vgpCompletion(reportId){
+  const f=findingsForReport(reportId);
+  if(!f.length)return 100;
+  const done=f.filter(x=>findingStatus(x)==='Clôturée').length;
+  return Math.round(done/f.length*100);
+}
+
+function vgpPage(el){
+  if(vgpView.view==='type')return vgpTypePage(el,vgpView.typeKey);
+  if(vgpView.view==='report')return vgpReportPage(el,vgpView.reportId);
+  if(vgpView.view==='plan')return vgpPlanPage(el,vgpView.typeKey);
+  if(vgpView.view==='globalPlan')return vgpGlobalPlan(el);
+  const s=vgpStats();
+  el.innerHTML=`
+  <div class="pagehead"><div><h1>VGP & conformité</h1><div class="muted">Registre des équipements, rapports, échéances et plan d’action des non-conformités.</div></div><div class="page-actions"><input id="quickVgpPdf" type="file" accept="application/pdf" style="display:none" onchange="quickImportPdf(event)">
+<button class="btn blue" onclick="document.getElementById('quickVgpPdf').click()">📄 Import intelligent PDF</button>
+<button class="btn" onclick="openGlobalPlan()">☷ Plan général</button><button class="btn primary" onclick="openReportForm(null,db.vgpTypes[0]?.key)">＋ Nouveau rapport</button></div></div>
+  <div class="grid stats">
+    <div class="card"><div class="stat-label">Équipements suivis</div><div class="stat-value">${s.equipments}</div><div class="stat-foot">Tous types de VGP</div></div>
+    <div class="card"><div class="stat-label">Rapports archivés</div><div class="stat-value">${s.reports}</div><div class="stat-foot">Historique conservé</div></div>
+    <div class="card" style="cursor:pointer" onclick="openGlobalPlan()"><div class="stat-label">NC ouvertes</div><div class="stat-value">${s.open}</div><div class="stat-foot">${s.overdue?`<span class="overdue">${s.overdue} en délai dépassé</span>`:'Aucune en retard'}</div></div>
+    <div class="card"><div class="stat-label">Échéances proches</div><div class="stat-value">${s.dueSoon}</div><div class="stat-foot">dans les 30 jours</div></div>
+    <div class="card"><div class="stat-label">Échéances dépassées</div><div class="stat-value">${s.dueLate}</div><div class="stat-foot">${s.dueLate?'À traiter':'Aucune'}</div></div>
+  </div>
+  <div class="notice blue" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>Importe un rapport PDF</b> : l’IA détecte les non-conformités, les zones et les actions, et prépare le plan d’action.</div><button class="btn primary" onclick="document.getElementById('quickVgpPdf').click()">📄 Importer un PDF</button></div><div class="section-head"><h2>Familles de VGP</h2><button class="btn sm" onclick="openVgpTypeForm()">＋ Ajouter une famille</button></div>
+  <div class="grid family-grid">${allTypes().map(t=>{
+    const rs=reportsForType(t.key), eq=equipmentForType(t.key), f=rs.flatMap(r=>findingsForReport(r.id)), open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length;
+    const latest=rs.slice().sort((a,b)=>String(b.inspection||'').localeCompare(String(a.inspection||'')))[0];
+    const due=latest?.next||'';
+    const st=dueState(due,t.alertDays);
+    return `<div class="card family-card" onclick="openVgpType('${esc(t.key)}')"><div class="family-icon">${esc(t.icon)}</div><h3>${esc(t.name)} <span class="chip">${esc(t.code)}</span></h3><div class="meta">${esc(t.desc||'')} • ${t.periodicityMonths} mois</div><div class="family-foot"><div class="stack"><span class="chip">${eq.length} équipement(s)</span><span class="chip">${rs.length} rapport(s)</span>${open?`<span class="pill red">${open} NC ouverte(s)</span>`:'<span class="pill">0 NC ouverte</span>'}</div><div class="small" style="margin-top:9px">Dernier rapport : ${latest?esc(latest.reportNumber||'—'):'—'}<br>Prochaine échéance : <span class="${st.className}">${esc(due||'—')}</span></div></div></div>`;
+  }).join('')}</div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card"><h2>Échéances VGP</h2>${followupTable()}</div>
+    <div class="card"><h2>Plan d’action en cours</h2>${actionMiniList()}</div>
+  </div>`;
+}
+function followupTable(){
+  const rows=allTypes().map(t=>{
+    const eq=equipmentForType(t.key).slice().sort((a,b)=>String(a.nextDue||'').localeCompare(String(b.nextDue||'')));
+    const soon=eq.filter(e=>dueState(e.nextDue,t.alertDays).key==='soon').length,late=eq.filter(e=>dueState(e.nextDue,t.alertDays).key==='late').length;
+    const latest=reportsForType(t.key).slice().sort((a,b)=>String(b.inspection||'').localeCompare(String(a.inspection||'')))[0];
+    return `<tr><td data-label="VGP"><b>${esc(t.name)}</b><div class="small muted">${esc(t.code)}</div></td><td data-label="Périodicité">${t.periodicityMonths} mois</td><td data-label="Équipements">${eq.length}</td><td data-label="Dernier rapport">${latest?esc(latest.reportNumber||'—'):'—'}</td><td data-label="Échéances">${late?`<span class="overdue">${late} dépassée(s)</span>`:soon?`<span class="soon">${soon} proche(s)</span>`:'<span class="ok">OK</span>'}</td><td data-label=""><button class="btn sm" onclick="openVgpType('${esc(t.key)}')">Ouvrir</button></td></tr>`;
+  }).join('');
+  return `<div class="tablewrap m-cards"><table><thead><tr><th>VGP</th><th>Périodicité</th><th>Équipements</th><th>Dernier rapport</th><th>Échéances</th><th></th></tr></thead><tbody>${rows||'<tr><td class="empty">Aucune donnée.</td></tr>'}</tbody></table></div>`;
+}
+function actionMiniList(){
+  const f=db.vgpFindings.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).slice().sort((a,b)=>String(a.due||'9999').localeCompare(String(b.due||'9999'))).slice(0,6);
+  if(!f.length)return '<div class="empty">Aucune non-conformité ouverte.</div>';
+  return `<div class="kpi-list">${f.map(x=>{const r=db.vgpReports.find(q=>q.id===x.reportId);return `<div class="kpi-row"><div><b>${esc(x.title)}</b><div class="small muted">${esc(r?.reportNumber||'Rapport')} • ${esc(x.owner||'Responsable à définir')}</div></div><span class="pill ${findingStatus(x)==='Délai dépassé'?'red':findingStatus(x)==='En cours'?'orange':''}">${esc(findingStatus(x))}</span></div>`}).join('')}</div>`;
+}
+
+function openVgpType(key){vgpView={view:'type',typeKey:key,reportId:''};render()}
+function openVgpPlan(key){vgpView={view:'plan',typeKey:key,reportId:''};render()}
+function openGlobalPlan(){vgpView={view:'globalPlan',typeKey:'',reportId:''};render()}
+function backVgpHome(){vgpView={view:'home',typeKey:'',reportId:''};render()}
+function openReport(id){vgpView={view:'report',typeKey:'',reportId:id};render()}
+
+function vgpTypePage(el,key){
+  const t=vgpType(key),rs=reportsForType(key).slice().sort((a,b)=>String(b.inspection||'').localeCompare(String(a.inspection||''))),eq=equipmentForType(key),f=rs.flatMap(r=>findingsForReport(r.id));
+  const open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length;
+  el.innerHTML=`<div class="breadcrumb"><button class="chip click" onclick="backVgpHome()">← Toutes les VGP</button><span class="chip">${esc(t.name)}</span><span class="chip">${esc(t.code)}</span></div>
+  <div class="pagehead"><div><h1>${esc(t.icon)} ${esc(t.name)}</h1><div class="muted">${esc(t.desc||'')} • périodicité ${t.periodicityMonths} mois</div></div><div class="page-actions"><button class="btn" onclick="openVgpPlan('${esc(t.key)}')">☷ Plan ${esc(t.code)}</button><button class="btn" onclick="openVgpTypeForm('${esc(t.key)}')">⚙ Paramètres</button><button class="btn primary" onclick="openReportForm(null,'${esc(t.key)}')">＋ Nouveau rapport</button></div></div>
+  <div class="grid stats" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+   <div class="card"><div class="stat-label">Équipements</div><div class="stat-value">${eq.length}</div></div>
+   <div class="card"><div class="stat-label">Rapports</div><div class="stat-value">${rs.length}</div></div>
+   <div class="card"><div class="stat-label">NC ouvertes</div><div class="stat-value">${open}</div></div>
+   <div class="card"><div class="stat-label">Prochaine échéance</div><div class="stat-value" style="font-size:19px">${esc(rs[0]?.next||'—')}</div></div>
+  </div>
+  <div class="section-head"><h2>Équipements suivis</h2><button class="btn sm" onclick="openEquipmentForm(null,'${esc(key)}')">＋ Ajouter un équipement</button></div>
+  <div class="tablewrap m-cards"><table><thead><tr><th>Équipement</th><th>Localisation</th><th>Identifiant / série</th><th>Dernière VGP</th><th>Prochaine</th><th>État</th><th></th></tr></thead><tbody>${eq.length?eq.map(e=>{
+    const ds=dueState(e.nextDue,t.alertDays);
+    return `<tr><td data-label="Équipement"><b>${esc(e.name)}</b></td><td data-label="Localisation">${esc(e.location||'—')}</td><td data-label="Identifiant">${esc(e.identifier||'—')}</td><td data-label="Dernière VGP">${esc(e.lastInspection||'—')}</td><td data-label="Prochaine" class="${ds.className}">${esc(e.nextDue||'—')}</td><td data-label="État"><span class="pill ${ds.key==='late'?'red':ds.key==='soon'?'orange':''}">${esc(ds.label)}</span></td><td data-label=""><div class="stack"><button class="btn sm" onclick="openEquipmentForm('${e.id}','${esc(key)}')">Modifier</button><button class="btn sm danger" onclick="deleteEquipment('${e.id}')">Suppr.</button></div></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty">Aucun équipement enregistré.</td></tr>'}</tbody></table></div>
+  <div class="section-head"><h2>Rapports</h2></div>
+  <div class="tablewrap m-cards"><table><thead><tr><th>Date</th><th>Rapport</th><th>Équipement(s)</th><th>NC</th><th>Progression</th><th>Échéance</th><th></th></tr></thead><tbody>${rs.length?rs.map(r=>{
+    const ff=findingsForReport(r.id),openN=ff.filter(x=>findingStatus(x)!=='Clôturée'&&findingStatus(x)!=='Annulée').length,p=vgpCompletion(r.id),ds=dueState(r.next,t.alertDays);
+    return `<tr onclick="openReport('${r.id}')" style="cursor:pointer"><td data-label="Date">${esc(r.inspection||'—')}</td><td data-label="Rapport"><b>${esc(r.reportNumber||'Rapport')}</b><div class="small muted">${esc(r.organism||'')}</div></td><td data-label="Équipement">${esc(r.equipment||'—')}</td><td data-label="NC"><span class="pill ${openN?'red':''}">${ff.length} / ${openN} ouverte(s)</span></td><td data-label="Progression">${p}%<div class="progress" style="margin-top:4px"><span style="width:${p}%"></span></div></td><td data-label="Échéance" class="${ds.className}">${esc(r.next||'—')}</td><td data-label=""><button class="btn sm" onclick="event.stopPropagation();openReport('${r.id}')">Ouvrir</button></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty">Aucun rapport enregistré.</td></tr>'}</tbody></table></div>`;
+}
+
+function vgpPlanPage(el,key){
+  const t=vgpType(key),f=db.vgpFindings.filter(x=>db.vgpReports.some(r=>r.id===x.reportId&&((r.vgpKey||r.reportType)===key)));
+  el.innerHTML=actionPlanHTML(`Plan d’action ${esc(t.code)}`,`Toutes les non-conformités des rapports ${esc(t.name)}.`,f,()=>openVgpType(key));
+}
+function vgpGlobalPlan(el){
+  el.innerHTML=actionPlanHTML('Plan d’action général VGP','Toutes les non-conformités, toutes familles et toutes années confondues.',db.vgpFindings,backVgpHome);
+}
+function actionPlanHTML(title,subtitle,findings,backFn){
+  const rows=findings.slice().sort((a,b)=>String(a.due||'9999').localeCompare(String(b.due||'9999')));
+  return `<div class="breadcrumb"><button class="chip click" onclick="(${backFn.toString()})()">← Retour</button><span class="chip">Plan d’action</span></div>
+  <div class="pagehead"><div><h1>${title}</h1><div class="muted">${subtitle}</div></div><div class="page-actions"><button class="btn" onclick="exportVgpPlan()">⇩ Exporter CSV</button><button class="btn primary" onclick="openFindingForm()">＋ Ajouter une NC</button></div></div>
+  <div class="toolbar"><input id="planSearch" placeholder="Rechercher NC, rapport, responsable…" oninput="filterPlan()"><select id="planStatus" onchange="filterPlan()"><option value="OPEN" selected>Ouvertes</option><option value="">Tous les statuts</option><option>À traiter</option><option>En cours</option><option>Clôturée</option><option>Délai dépassé</option></select><select id="planPriority" onchange="filterPlan()"><option value="">Toutes priorités</option><option>Basse</option><option>Normale</option><option>Haute</option><option>Critique</option></select></div>
+  <div class="stack" style="margin:8px 0"><button type="button" class="chip click" onclick="setPlanQuick('open')">Ouvertes</button><button type="button" class="chip click" onclick="setPlanQuick('late')">⚠ En retard</button><button type="button" class="chip click" onclick="setPlanQuick('crit')">Critiques</button><button type="button" class="chip click" onclick="setPlanQuick('all')">Toutes</button></div>
+  <div id="planTable" class="tablewrap m-cards"><table class="plan-table"><thead><tr><th>NC</th><th>Rapport</th><th>Source</th><th>Action</th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th>Origine</th><th></th></tr></thead><tbody>${rows.length?rows.map(x=>{
+    const r=db.vgpReports.find(q=>q.id===x.reportId),st=findingStatus(x), origin=['ai','ai-review','ai-added','structured'].includes(x.origin)?'IA':'Saisie';
+    return `<tr class="${['Clôturée','Annulée'].includes(st)?'hidden':''}" data-status="${esc(st)}" data-priority="${esc(x.priority||'Normale')}" data-search="${esc([x.title,x.action,r?.reportNumber,r?.equipment,x.owner,x.sourcePage].join(' ').toLowerCase())}"><td data-label="NC"><b>${esc(x.title)}</b><div class="small muted">${esc(x.id)}</div></td><td data-label="Rapport">${esc(r?.reportNumber||'—')}<div class="small muted">${esc(r?.inspection||'')}</div></td><td data-label="Source">${x.sourcePage?`Page ${esc(x.sourcePage)}`:'—'} ${x.sourceQuote?`<div class="small muted">« ${esc(x.sourceQuote).slice(0,110)}${String(x.sourceQuote).length>110?'…':''} »</div>`:''}</td><td data-label="Action">${esc(x.action||'À définir')}</td><td data-label="Responsable">${esc(x.owner||'—')}</td><td data-label="Échéance" class="${st==='Délai dépassé'?'overdue':''}">${esc(x.due||'—')}</td><td data-label="Priorité"><span class="pill ${x.priority==='Critique'?'red':x.priority==='Haute'?'orange':''}">${esc(x.priority||'Normale')}</span></td><td data-label="Statut"><span class="pill ${st==='Clôturée'?'':'red'}">${esc(st)}</span></td><td data-label="Origine"><span class="tag ${origin==='IA'?'ai':'man'}">${origin}</span></td><td data-label=""><div class="stack">${st!=='Clôturée'?`<button class="btn sm primary" onclick="quickCloseFinding('${x.id}')">✔ Clôturer</button>`:''}<button class="btn sm" onclick="openFindingForm('${x.id}')">Modifier</button>${r?`<button class="btn sm" onclick="openReport('${r.id}')">Rapport</button>`:''}</div></td></tr>`;
+  }).join(''):'<tr><td colspan="10" class="empty">Aucune non-conformité.</td></tr>'}</tbody></table></div>`;
+}
+function quickCloseFinding(id){const f=db.vgpFindings.find(x=>String(x.id)===String(id));if(!f)return;f.status='Clôturée';f.closedAt=now();saveDB();toast('NC clôturée.');render()}
+function setPlanQuick(v){const st=document.getElementById('planStatus'),pr=document.getElementById('planPriority');if(pr)pr.value=v==='crit'?'Critique':'';if(st)st.value=v==='open'||v==='crit'?'OPEN':v==='late'?'Délai dépassé':v==='all'?'':'OPEN';filterPlan()}
+function filterPlan(){
+  const q=(document.getElementById('planSearch')?.value||'').toLowerCase(),s=document.getElementById('planStatus')?.value||'',p=document.getElementById('planPriority')?.value||'';
+  document.querySelectorAll('#planTable tbody tr').forEach(tr=>tr.classList.toggle('hidden',!tr.dataset.search.includes(q)||(s==='OPEN'?['Clôturée','Annulée'].includes(tr.dataset.status):s&&tr.dataset.status!==s)||(p&&tr.dataset.priority!==p)));
+}
+
+function vgpReportPage(el,id){
+  const r=db.vgpReports.find(x=>x.id===id);if(!r)return backVgpHome();
+  const t=vgpType(r.vgpKey||r.reportType),f=findingsForReport(id).slice().sort((a,b)=>String(a.due||'9999').localeCompare(String(b.due||'9999'))),p=vgpCompletion(id),st=findingStatus;
+  el.innerHTML=`<div class="breadcrumb"><button class="chip click" onclick="openVgpType('${esc(t.key)}')">← ${esc(t.name)}</button><span class="chip">${esc(t.code)}</span><span class="chip">${esc(reportYear(r))}</span><span class="chip">${esc(r.reportNumber||'Rapport')}</span></div>
+  <div class="pagehead"><div><h1>${esc(r.reportNumber||'Rapport VGP')}</h1><div class="muted">${esc(t.name)} • inspection du ${esc(r.inspection||'—')}</div></div><div class="page-actions"><button class="btn" onclick="openReportForm('${r.id}')">Modifier</button><button class="btn danger" onclick="deleteReport('${r.id}')">Supprimer</button></div></div>
+  <div class="grid report-grid">
+    <div>
+      <div class="card">
+        <div class="detail-grid">
+          <div class="detail-box"><div class="label">Type</div><b>${esc(t.code)}</b></div>
+          <div class="detail-box"><div class="label">Équipement</div><b>${esc(r.equipment||'—')}</b></div>
+          <div class="detail-box"><div class="label">Organisme</div><b>${esc(r.organism||'—')}</b></div>
+          <div class="detail-box"><div class="label">Prochaine échéance</div><b>${esc(r.next||'—')}</b></div>
+        </div>
+        <div style="margin-top:15px"><div class="stack" style="justify-content:space-between"><b>Progression du plan d’action</b><b>${p}%</b></div><div class="progress" style="margin-top:6px"><span style="width:${p}%"></span></div></div>
+      </div>
+      <div class="card" style="margin-top:16px"><div class="section-head" style="margin-top:0"><h2>Plan d’action du rapport</h2><button class="btn primary" onclick="openFindingForm(null,'${r.id}')">＋ Nouvelle NC</button></div>
+      <div class="tablewrap m-cards"><table><thead><tr><th>Non-conformité</th><th>Lieu / équipement</th><th>Action</th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody>${f.length?f.map(x=>{const q=st(x),obs=x.reportObservationNo?observationLabel(x.reportObservationNo,x.observationKind):'';return `<tr class="${q==='Clôturée'?'finding-closed':q==='Délai dépassé'||x.priority==='Critique'?'finding-open':'finding-progress'}"><td data-label="Non-conformité"><b>${esc(x.description||x.title||'Non-conformité')}</b>${obs?`<div class="small muted">${esc(obs)}</div>`:''}</td><td data-label="Lieu / équipement">${x.location?`<div>${esc(x.location)}</div>`:''}${x.equipment?`<div class="small muted">${esc(x.equipment)}</div>`:'—'}</td><td data-label="Action">${esc(cleanActionText(x.action)||'—')}</td><td data-label="Responsable">${esc(x.owner||'—')}</td><td data-label="Échéance">${esc(x.due||'—')}</td><td data-label="Priorité"><span class="pill ${x.priority==='Critique'?'red':x.priority==='Haute'?'orange':''}">${esc(x.priority||'Normale')}</span></td><td data-label="Statut"><span class="pill ${q==='Clôturée'?'':'red'}">${esc(q)}</span></td><td data-label=""><div class="stack">${q!=='Clôturée'?`<button type="button" class="btn sm primary" onclick="quickCloseFinding('${x.id}')">✔ Clôturer</button>`:''}<button type="button" class="btn sm" onclick="openFindingForm('${x.id}')">Modifier</button></div></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">Aucune non-conformité dans le plan de ce rapport.</td></tr>'}</tbody></table></div></div>
+    <div class="${(!f.length||r.ai?.candidates?.length)?'ai-first':''}">
+      <div class="ai-panel">
+        <div class="ai-title"><span class="ai-orb">✦</span> Analyse IA du rapport</div>
+        ${directAiReady()?'':'<div class="notice">⚠ Clé Gemini manquante. <button type="button" class="btn sm primary" onclick="go(\'settings\')">Configurer l’IA</button></div>'}
+        <div class="dropzone" id="dropzone">
+          <input id="reportPdfInput" type="file" accept="application/pdf" style="display:none" onchange="handlePdfInput(event,'${r.id}')">
+          <button class="btn blue" onclick="document.getElementById('reportPdfInput').click()">📄 Choisir le rapport PDF</button>
+          <div class="small muted" style="margin-top:7px">ou glisser-déposer le PDF ici</div>
+        </div>
+        <div id="aiReportStatus" class="small muted" style="margin-top:9px">${r.ai?.status?esc(r.ai.status):r.ai?.fileName?`Dernière analyse : ${esc(r.ai.fileName)}`:'Aucune analyse encore.'}</div>
+        
+        <div id="aiActionStatus" class="small muted" style="margin-top:8px"></div><div style="margin-top:10px"><button id="completeAiBtn" type="button" class="btn primary" style="width:100%;padding:14px;font-size:1rem" ${aiBusy?'disabled':''} onclick="runAnalysis('${r.id}')">${aiBusy?'⏳ Analyse en cours…':'🤖 Analyser avec l’IA'}</button><details style="margin-top:8px"><summary class="small muted">Options avancées</summary><div style="margin-top:6px"><button type="button" class="btn sm" onclick="startAiAnalysis('${r.id}')">Pré-analyse locale (sans IA)</button></div></details></div>
+        ${r.ai?.candidates?.length?`<div class="ai-result"><div class="stack" style="justify-content:space-between"><div><b>Propositions IA</b><div class="small muted">Vérifie, modifie si besoin, puis ajoute au plan.</div></div><div class="stack"><span class="chip">${r.ai.candidates.length} trouvée(s)</span><button type="button" class="btn sm primary" onclick="acceptAllAiCandidates('${r.id}')">＋ Tout ajouter au plan</button></div></div>${r.ai.candidates.map((c,i)=>`<div class="ai-finding"><div class="ai-finding-head"><div><b>${esc(c.description||c.title)}</b>${c.reportObservationNo?`<div class="small muted">${esc(observationLabel(c.reportObservationNo,c.observationKind))}</div>`:''}</div><span class="pill ${c.priority==='Critique'?'red':c.priority==='Haute'?'orange':''}">${esc(c.priority||'Normale')}</span></div><div class="small muted" style="margin-top:5px">${esc(c.location||'Localisation non précisée')}${c.equipment?` • ${esc(c.equipment)}`:''}</div>${c.action?`<div class="small" style="margin-top:5px"><b>Action :</b> ${esc(c.action)}</div>`:''}<details style="margin-top:6px"><summary class="small muted">Voir la preuve extraite</summary><div class="small muted" style="margin-top:4px">${esc(c.sourceQuote||'—')}</div></details><div class="stack" style="margin-top:8px"><button class="btn sm primary" onclick="acceptAiCandidate('${r.id}',${i})">＋ Ajouter au plan</button><button class="btn sm" onclick="editAiCandidate('${r.id}',${i})">Modifier</button></div></div>`).join('')}</div>`:''}
+      </div>
+      <div class="card" style="margin-top:16px"><h2>Informations du rapport</h2><div class="help">Conserve ici la référence du rapport, les fichiers associés et les éléments utiles à l’audit. Le texte extrait sert à justifier chaque non-conformité proposée.</div><div class="file-row"><span>Référence</span><b>${esc(r.reportNumber||'—')}</b></div><div class="file-row"><span>Fichier PDF</span><b>${esc(r.ai?.fileName||'Non importé')}</b></div><div class="file-row"><span>Nombre de pages</span><b>${esc(r.ai?.pages||'—')}</b></div></div>
+    </div>
+  </div>`;
+  setTimeout(()=>setupDropzone(r.id),0);
+}
+function setupDropzone(reportId){
+  const d=document.getElementById('dropzone');if(!d)return;
+  ['dragenter','dragover'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.add('drag')}));
+  ['dragleave','drop'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove('drag')}));
+  d.addEventListener('drop',ev=>{const f=ev.dataTransfer.files?.[0];if(f)importPdfToReport(f,reportId)});
+}
+const __pdfFiles={};
+function directAiReady(){const c=aiSettingsSafe();return c.provider==='gemini'&&!!c.apiKey}
+async function importPdfToReport(file,id){
+  if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name||'')){toast('Choisis un fichier PDF.');return}
+  const r=db.vgpReports.find(x=>String(x.id)===String(id));if(!r)return;
+  __pdfFiles[id]=file;
+  if(directAiReady()){r.ai={...(r.ai||{}),fileName:file.name,candidates:[],status:''};saveDB();render();await analyzePdfDirect(id)}
+  else{await readPdfIntoReport(file,id);toast('PDF lu. Ajoute ta clé Gemini dans Paramètres pour lancer l’analyse IA.')}
+}
+async function runAnalysis(id){
+  if(directAiReady())return analyzePdfDirect(id);
+  const r=db.vgpReports.find(x=>String(x.id)===String(id));
+  if(r?.ai?.pageTexts?.length)return runCompleteAi(id);
+  toast('Ajoute ta clé Gemini dans Paramètres, puis choisis le PDF.');
+}
+async function analyzePdfDirect(id){
+  const r=db.vgpReports.find(x=>String(x.id)===String(id));if(!r||aiBusy)return;
+  const file=__pdfFiles[id];
+  if(!file){toast('Choisis d’abord le PDF du rapport.');document.getElementById('reportPdfInput')?.click();return}
+  if(file.size>50*1024*1024){toast('PDF trop lourd (maximum Gemini : 50 Mo).');return}
+
+  aiBusy=true;
+  r.ai={...(r.ai||{}),fileName:file.name,status:'⏳ Préparation du rapport et contrôle de complétude…'};
+  saveDB();render();
+
+  try{
+    /*
+     * 1) Lecture locale du PDF.
+     * Elle sert uniquement de filet de sécurité pour les rapports dont le
+     * tableau récapitulatif est exploitable (Q18 notamment).
+     */
+    if(!r.ai?.pageTexts?.length){
+      await readPdfIntoReport(file,id);
+    }
+    const local=extractVgpObservationSummary(r.ai?.rawText||'',r.ai?.pageTexts||[],r.ai?.observationMarkers||{});
+    const structured=(local.candidates||[]).map(x=>({...x,origin:'structured'}));
+    r.ai.structuredCount=structured.length;
+
+    /*
+     * 2) Gemini reçoit le PDF ORIGINAL, pas seulement le texte extrait.
+     * Cela conserve tableaux, couleurs, légendes, images et mise en page.
+     */
+    r.ai.status=`⏳ Gemini analyse le PDF complet…${structured.length?` (${structured.length} observation(s) de contrôle détectée(s) localement)` :''}`;
+    saveDB();render();
+
+    const buf=new Uint8Array(await file.arrayBuffer());
+    let bin='';
+    for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
+    const baseline=structured.map(x=>({
+      observation_number:x.reportObservationNo||'',
+      page:x.page||'',
+      location:x.location||'',
+      equipment:x.equipment||'',
+      finding:x.description||'',
+      action:x.action||''
+    }));
+
+    const prompt=`Analyse ce rapport VGP PDF EN ENTIER, page par page, comme un contrôleur qualité d'extraction.
+
+OBJECTIF PRINCIPAL : produire la liste COMPLETE des non-conformités / observations donnant lieu à une action.
+
+RÈGLES ABSOLUES :
+1. Ne fixe AUCUN nombre maximum de NC.
+2. Compte d'abord toutes les observations distinctes du rapport, puis produis UNE ligne JSON par observation.
+3. Deux observations ayant la même action mais un lieu, matériel ou numéro différent restent DEUX observations.
+4. Conserve le numéro d'observation du rapport lorsqu'il existe.
+5. Conserve la vraie page PDF.
+6. Sépare toujours : location = zone/localisation ; equipment = matériel ou repère ; finding = constat ; action = action corrective.
+7. Ne mets jamais une référence réglementaire dans finding ou action.
+8. Conserve "Nouvelle observation" / "Ancienne observation" / "Récurrente" uniquement si le document permet réellement de le déterminer.
+9. Lis aussi les tableaux, légendes, couleurs, symboles et images : ils peuvent porter le numéro ou le caractère nouveau/récurrent.
+10. Ne fusionne jamais deux observations distinctes.
+11. N'invente aucune information absente.
+12. Si le rapport possède une "Liste récapitulative des observations", utilise-la comme référence de complétude, mais vérifie les détails dans les pages concernées.
+13. Avant de répondre, vérifie que le nombre de lignes retournées correspond au nombre d'observations distinctes réellement présentes. Si tu as un doute, conserve l'observation plutôt que de la supprimer.
+
+RÉSULTAT JSON :
+{
+  "findings":[
+    {
+      "page":2,
+      "observation_number":"1",
+      "novelty":"Nouvelle observation",
+      "location":"Zone / bâtiment / local complet",
+      "equipment":"Matériel ou repère",
+      "finding":"Constat court et fidèle au rapport",
+      "action":"Action corrective du rapport",
+      "priority":"Normale",
+      "evidence":"Preuve courte tirée du rapport"
+    }
+  ],
+  "total_observations_detected":19,
+  "pages_covered":[2,3,4,5],
+  "notes":""
+}
+
+POINT DE CONTRÔLE LOCAL (ce n'est PAS une limite et il peut être incomplet) :
+${JSON.stringify(baseline)}`;
+
+    const reply=await callAiEndpointV2(prompt,{
+      pdfBase64:btoa(bin),
+      responseSchema:geminiFindingResponseSchema()
+    });
+
+    const parsed=extractJsonObject(reply)||{};
+    let found=dedupeAiCandidates(parseAiFindings(reply).map(f=>({...f,chunkIndex:0,origin:'ai'})))
+      .map(c=>({...c,confidence:.92}));
+    let aiTotal=Number(parsed.total_observations_detected||parsed.total||0);
+
+    /*
+     * 3) Si Gemini annonce plus d'observations qu'il n'en a sorties,
+     * on lui demande uniquement les manquantes. Ce second appel n'est
+     * déclenché qu'en cas de signal d'incomplétude.
+     */
+    if(aiTotal>found.length){
+      r.ai.status=`⚠ Gemini a compté ${aiTotal} observation(s) mais n'en a détaillé que ${found.length} — recherche des manquantes…`;
+      saveDB();render();
+      const already=found.map(x=>({
+        observation_number:x.reportObservationNo||'',
+        page:x.page||'',
+        location:x.location||'',
+        equipment:x.equipment||'',
+        finding:x.description||'',
+        action:x.action||''
+      }));
+      try{
+        const missingReply=await callAiEndpointV2(`Relis le PDF ORIGINAL. Première extraction : ${found.length}. Le contrôle de comptage indique ${aiTotal} observation(s). Cherche UNIQUEMENT les observations distinctes manquantes. Ne répète aucune observation déjà listée ci-dessous. Si le numéro d'observation existe, utilise-le. Réponds uniquement avec le même JSON structuré.\n\nOBSERVATIONS DÉJÀ TROUVÉES :\n${JSON.stringify(already)}`,{
+          pdfBase64:btoa(bin),
+          responseSchema:geminiFindingResponseSchema()
+        });
+        const missing=dedupeAiCandidates(parseAiFindings(missingReply).map(f=>({...f,origin:'ai-added'})));
+        found=dedupeAiCandidates([...found,...missing]);
+      }catch(e){console.warn('Contrôle de complétude Gemini ignoré',e)}
+    }
+
+    /*
+     * 4) Fusion sans perte : le tableau structuré local reste présent même
+     * si Gemini en a oublié une partie ; Gemini enrichit les lignes et ajoute
+     * les observations que le moteur local ne sait pas lire.
+     */
+    const merged=mergeAiAndStructured(structured,found);
+    r.ai={
+      ...r.ai,
+      candidates:merged,
+      aiCount:found.length,
+      aiReportedTotal:aiTotal,
+      aiFinishedAt:new Date().toISOString(),
+      status:`✓ ${merged.length} non-conformité(s) préparée(s)${structured.length?` — ${structured.length} issue(s) du contrôle de complétude du rapport`:''}. Vérifie puis ajoute au plan.`
+    };
+    saveDB();
+    toast(r.ai.status);
+  }catch(e){
+    console.error(e);
+    r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e.message||e}`};
+    toast('Erreur IA : '+(e.message||e));
+  }finally{
+    aiBusy=false;saveDB();render();
+  }
+}
+async function quickImportPdf(ev){
+  const f=ev.target.files?.[0];ev.target.value='';if(!f)return;
+  if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){toast('Choisis un fichier PDF.');return}
+  const base=f.name.replace(/\.pdf$/i,'');const low=base.toLowerCase();
+  const t=db.vgpTypes.find(x=>low.includes(String(x.code||'').toLowerCase())||low.includes(String(x.key||'').toLowerCase()))||db.vgpTypes[0];
+  const r={id:uid('VGP'),created:new Date().toISOString(),vgpKey:t?.key,reportNumber:base,equipment:base,location:'À compléter',organism:'',inspection:now(),next:t?reportNext(t,now()):'',status:'À traiter',notes:'Créé par import PDF',ai:null};
+  db.vgpReports.push(r);saveDB();openReport(r.id);
+  await importPdfToReport(f,r.id);
+}
+async function handlePdfInput(ev,id){const f=ev.target.files?.[0];ev.target.value='';if(f)await importPdfToReport(f,id)}
+function visualTextFromItems(items){
+  const rows=[];
+  for(const item of (items||[])){
+    const txt=String(item.str||'').replace(/\s+/g,' ').trim(); if(!txt)continue;
+    const tr=item.transform||[], x=Number(tr[4]||0), y=Number(tr[5]||0);
+    let row=rows.find(r=>Math.abs(r.y-y)<=2.5); if(!row){row={y,items:[]};rows.push(row)}
+    row.items.push({x,txt});
+  }
+  rows.sort((a,b)=>b.y-a.y);
+  return rows.map(r=>r.items.sort((a,b)=>a.x-b.x).map(x=>x.txt).join(' ').replace(/\s+/g,' ').trim()).filter(Boolean).join('\n');
+}
+function findRecapStartPage(pageTexts){for(let i=0;i<(pageTexts||[]).length;i++)if(/liste\s+récapitulative\s+des\s+observations|récapitulatif\s+des\s+observations|liste\s+des\s+anomalies|synthèse\s+des\s+observations/i.test(pageTexts[i]))return i;return -1}
+async function detectObservationMarkersFromPdf(pdf,startIndex){
+  const markers={}; if(!pdf||startIndex<0)return markers;
+  for(let p=startIndex;p<Math.min(pdf.numPages,startIndex+24);p++){
+    try{
+      const page=await pdf.getPage(p+1), tc=await page.getTextContent();
+      const nums=tc.items.filter(it=>/^\d{1,3}$/.test(String(it.str||'').trim())&&Number(it.transform?.[4]||999)<75&&Number(it.transform?.[5]||0)>70&&Number(it.transform?.[5]||0)<780);
+      if(!nums.length)continue;
+      const viewport=page.getViewport({scale:1.5}); const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+      const ctx=canvas.getContext('2d',{willReadFrequently:true}); await page.render({canvasContext:ctx,viewport}).promise;
+      for(const it of nums){const n=String(it.str||'').trim();const [vx,vy]=viewport.convertToViewportPoint(Number(it.transform[4]||0),Number(it.transform[5]||0));const x0=Math.max(0,Math.floor(vx-28)),y0=Math.max(0,Math.floor(vy-30)),x1=Math.min(canvas.width,Math.ceil(vx+32)),y1=Math.min(canvas.height,Math.ceil(vy+38));const data=ctx.getImageData(x0,y0,x1-x0,y1-y0).data;let orange=0;for(let j=0;j<data.length;j+=4){const r=data[j],g=data[j+1],b=data[j+2];if(r>180&&g>55&&g<190&&b<135&&(r-g)>55)orange++;}markers[n]=orange>25?'Nouvelle observation':'Déjà présente dans l’ancien rapport';}
+    }catch(e){console.warn('Détection ancien/nouveau impossible page',p+1,e)}
+  }
+  return markers;
+}
+async function readPdfIntoReport(file,id){
+  if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name||'')){toast('Choisis un fichier PDF.');return}
+  const el=document.getElementById('aiReportStatus');if(el)el.textContent='Lecture du PDF en cours…';
+  try{
+    const pdfjs=await loadPdfJs();const buf=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data:buf}).promise;let text='';let pageTexts=[];
+    for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);const tc=await pg.getTextContent();const pt=visualTextFromItems(tc.items);pageTexts.push(pt);text+=`\n\n--- PAGE ${p} ---\n${pt}`}
+    const recapStart=findRecapStartPage(pageTexts), observationMarkers=await detectObservationMarkersFromPdf(pdf,recapStart);const r=db.vgpReports.find(x=>x.id===id);if(!r)return;
+    r.ai={...(r.ai||{}),fileName:file.name,pages:pdf.numPages,rawText:text,textPreview:text.slice(0,5000),pageTexts,observationMarkers,parsedAt:new Date().toISOString(),status:'PDF lu localement — prêt pour analyse'};saveDB();render();toast(`${pdf.numPages} page(s) lue(s).`);
+  }catch(e){console.error(e);if(el)el.textContent='Impossible de lire ce PDF dans le navigateur.';alert('Lecture PDF impossible : '+e.message)}
+}
+async function startAiAnalysis(reportId){
+  const r=db.vgpReports.find(x=>String(x.id)===String(reportId));
+  if(!r)return toast('Rapport introuvable.');
+  if(!r.ai?.rawText){toast('Importe d’abord le rapport PDF.');return}
+  try{
+    const parsed=extractVgpObservationSummary(r.ai.rawText,r.ai.pageTexts||[],r.ai.observationMarkers||{});
+    r.ai.structuredCount=parsed.candidates.length;
+    r.ai.structuredSource=parsed.source;
+    r.ai.reportFamily=detectReportFamily(r.ai.rawText,r);
+    r.ai.candidates=parsed.candidates.map(x=>normalizeFindingForApp({...x,id:uid('AIC'),origin:'structured',confidence:x.confidence||.97}));
+    r.ai.status=`Pré-analyse locale terminée : ${r.ai.candidates.length} élément(s).`;
+    saveDB();render();toast(`${r.ai.candidates.length} élément(s) préparé(s).`);
+  }catch(e){console.error(e);toast('Pré-analyse impossible : '+(e?.message||e))}
+}
+
+function stripRegulatoryRefs(v){
+  let out=String(v||'').replace(/\s+/g,' ').trim();
+  const ref=/^(?:NF\s*C\s*15\s*-\s*100(?:\s*:\s*\d{1,4})?|NF\s*EN\s*\d{3,6}(?:[-:]\s*\d{1,4})?|NF\s*C\s*\d{1,5}(?:\s*[-:]\s*\d{1,4})?|R\.\s*\d{3,6}(?:-\d{1,3})?|EN\s*\d{3,6}(?:[-\/]\d{1,3})?)\s+/i;
+  let guard=0;while(ref.test(out)&&guard++<8)out=out.replace(ref,'').trim();
+  return out.replace(/\s+/g,' ').trim();
+}
+function removeRegulatoryReferences(v){
+  let s=String(v||'');
+  s=s.replace(/\bR\.\s*\d{3,6}(?:-\d{1,3})?\b/gi,'');
+  s=s.replace(/\bNF\s*C\s*15\s*-\s*100\s*:\s*\d{1,4}(?:\s*[A-Z])?\b/gi,'');
+  s=s.replace(/\bNF\s*C\s*\d{1,5}\s*[-:]?\s*\d{1,4}(?:\s*[A-Z])?\b/gi,'');
+  s=s.replace(/\bNF\s*EN\s*\d{3,6}(?:[-:]\s*\d{1,4})?(?:\s*[A-Z])?\b/gi,'');
+  s=s.replace(/\bArrêté\s+du\s+\d{1,2}\/\d{1,2}\/\d{4}(?:-\d+)?\b/gi,'');
+  return s.replace(/^\d{1,3}\s*:\s*/,'').replace(/\s+/g,' ').replace(/\s+([,.;:])/g,'$1').trim();
+}
+function cleanHumanText(v){return removeRegulatoryReferences(String(v||'').replace(/[\uE000-\uF8FF]/g,' ').replace(/(^|\s)[üØ§»](?=\s|$)/g,' ')).replace(/^[:\-–—.\s]+|[:\-–—.\s]+$/g,'').replace(/\s+/g,' ').trim()}
+function cleanLocationText(v){
+  let s=String(v||'').replace(/\s+/g,' ').trim();
+  const m=s.match(/^PROFILS\s+SYSTEMES\s*(?:\(([^)]+)\))?\s*(.*)$/i);
+  if(m){const site=String(m[1]||'').trim();const rest=String(m[2]||'').replace(/^[-–—:]\s*/,'').trim();s=[site,rest].filter(Boolean).join(' — ')}
+  else s=s.replace(/^PROFILS\s+SYSTEMES\s*(?:[-–—:]\s*)?/i,'');
+  return s.replace(/\s+-\s+/g,' — ').trim();
+}
+function cleanActionText(v){
+  let s=String(v||'').replace(/\r/g,'').replace(/\s+/g,' ').trim();
+  s=s.replace(/^\(P\)\s*/i,'');
+  const cutPatterns=[/\s+PROFILS\s+SYSTEMES\b/i,/\s+Ø\s+/i,/\s+[•·]\s+/i,/\s+R\.\s*\d{3,6}(?:-\d{1,3})?\b/i,/\s+NF\s*(?:C|EN)\s*\d/i,/\s+Arrêté\s+du\s+\d{1,2}\/\d{1,2}\/\d{4}/i];
+  let cut=s.length;for(const re of cutPatterns){const mm=re.exec(s);if(mm&&mm.index<cut)cut=mm.index}
+  s=s.slice(0,cut).trim();
+  return cleanHumanText(s).slice(0,320);
+}
+function splitLogicalLines(txt){return String(txt||'').replace(/\r/g,'').replace(/\s+(?=PROFILS\s+SYSTEMES\b)/gi,'\n').replace(/\s+(?=[·•]\s+)/g,'\n').replace(/\s+(?=Ø\s+)/g,'\n').split(/\n+/).map(x=>x.trim()).filter(Boolean)}
+function lineIsLocation(line){return /^PROFILS\s+SYSTEMES\b/i.test(String(line||''))}
+function lineIsEquipment(line){return /^(?:Ø|[•·])\s*/.test(String(line||''))}
+function isGenericEquipment(v){return /^(?:Observation\(s\) local|observation\(s\) local|Observation local)$/i.test(String(v||'').trim())}
+function isReportNoise(line){const s=String(line||'').trim();return !s||/^RAPPORT\s+-/i.test(s)||/^N° DE RAPPORT/i.test(s)||/^Date\s*:/i.test(s)||/^Page\s+\d+\s*\/\s*\d+/i.test(s)||/^Numéro d'observation récurrente/i.test(s)||/^Liste récapitulative des observations/i.test(s)||/^Localisation\s+/i.test(s)||/\(P\)\s*:\s*Préconisation/i.test(s)}
+function cleanContextLine(line){return String(line||'').replace(/^(?:Ø|[•·])\s*/,'').replace(/\s+/g,' ').trim()}
+function findIssueBeforeP(lines,pIndex){
+  let lastRef=-1;for(let i=pIndex-1;i>=0;i--){const l=String(lines[i]||'').trim();if(/^(?:R\.\s*|NF\s*C|NF\s*EN|Arrêté\s+du|EN\s*\d)/i.test(l)){lastRef=i;break}if(lineIsLocation(l)||lineIsEquipment(l))break}
+  const candidates=[];for(let i=lastRef>=0?lastRef+1:Math.max(0,pIndex-5);i<pIndex;i++){const l=String(lines[i]||'').trim();if(!l||isReportNoise(l)||/^N°\s*Obs\b/i.test(l)||lineIsLocation(l)||lineIsEquipment(l)||/^concerne\b/i.test(l)||/^\(P\)/i.test(l))continue;candidates.push(l)}
+  return cleanHumanText(candidates.join(' '));
+}
+function actionAfterP(lines,pIndex){
+  const first=String(lines[pIndex]||''),pos=first.search(/\(P\)/i);let acc=pos>=0?first.slice(pos+3):'';
+  for(let i=pIndex+1;i<lines.length;i++){const l=String(lines[i]||'').trim();if(lineIsLocation(l)||lineIsEquipment(l)||/^(?:R\.\s*|NF\s*C|NF\s*EN|Arrêté\s+du|EN\s*\d)/i.test(l)||/^--- PAGE/i.test(l)||isReportNoise(l)||/^\d{1,3}$/.test(l))break;acc+=' '+l}
+  return cleanActionText(acc);
+}
+function findLastEquipment(lines,pIndex,currentEquipment){for(let i=pIndex-1;i>=0;i--){const l=String(lines[i]||'').trim();if(lineIsLocation(l))break;if(lineIsEquipment(l)){const c=cleanContextLine(l);if(!isGenericEquipment(c))return c}}return currentEquipment||''}
+function observationLabel(no,kind){return no?`Observation ${no}${kind?` — ${kind}`:''}`:'Non-conformité'}
+function normalizeFindingForApp(x){
+  const rawTitle=String(x?.title||x?.issue||'Non-conformité').replace(/\s+/g,' ').trim();
+  const rawDescription=String(x?.description||x?.issue||'').replace(/\s+/g,' ').trim();
+  const rawAction=String(x?.action||'').replace(/\s+/g,' ').trim();
+  const reportObservationNo=x?.reportObservationNo?String(x.reportObservationNo):'';
+  const observationKind=String(x?.observationKind||x?.novelty||'').trim();
+  const title=reportObservationNo?observationLabel(reportObservationNo,observationKind):cleanHumanText(rawTitle);
+  let description=cleanHumanText(rawDescription),action=cleanActionText(rawAction);
+  const location=cleanLocationText(x?.location);let equipment=cleanHumanText(x?.equipment);if(isGenericEquipment(equipment))equipment='';
+  const p1=/\s+PROFILS\s+SYSTEMES\b/i.exec(action);if(p1)action=action.slice(0,p1.index).trim();
+  const p2=/\s+(?:R\.\s*\d{3,6}(?:-\d{1,3})?|NF\s*(?:C|EN)|Arrêté\s+du)\b/i.exec(action);if(p2)action=action.slice(0,p2.index).trim();
+  if(reportObservationNo){const re=new RegExp('(^|\\s)'+String(reportObservationNo).replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')+'(?=\\s|$)','g');description=description.replace(re,'$1').replace(/\s+/g,' ').trim();}
+  return{...x,title:title.slice(0,120),description:description.slice(0,320),action:action.slice(0,320),location:location.slice(0,220),equipment:equipment.slice(0,180),reportObservationNo,observationKind,novelty:observationKind,sourceQuote:String(x?.sourceQuote||description||action||'').replace(/\s+/g,' ').trim().slice(0,500),page:x?.page||x?.sourcePage||'',sourcePage:x?.sourcePage||x?.page||'',priority:x?.priority||guessPriority({title,description,action}),confidence:Number.isFinite(Number(x?.confidence))?Number(x.confidence):.8};
+}
+function detectReportFamily(fullText,report){const t=(String(fullText||'')+' '+String(report?.reportType||'')+' '+String(report?.vgpKey||'')+' '+String(report?.reportName||'')).toLowerCase();if(/q18|installations? électriques?|électrique/.test(t))return 'Q18 / électricité';if(/q19|thermograph|infrarouge/.test(t))return 'Q19 / thermographie';if(/atex|atmosphère explosive/.test(t))return 'ATEX';if(/appareil(?:s)? de levage|pont roulant|grue|potence|treuil|monte-charge|équipement de levage/.test(t))return 'Appareils de levage';if(/porte[s]?|portail|porte souple/.test(t))return 'Portes / portails';return 'Autre VGP'}
+function extractVgpObservationSummary(fullText,pageTexts,observationMarkers){
+  const pages=(pageTexts||[]).map(String),start=findRecapStartPage(pages);if(start<0)return{source:'détection structurée universelle',candidates:fallbackVgpDetection(fullText,pages)};
+  const candidates=[];let currentLocation='',currentEquipment='',n=0;let stop=false;
+  for(let pi=start;pi<Math.min(pages.length,start+24)&&!stop;pi++){
+    const lines=splitLogicalLines(pages[pi]);
+    for(let i=0;i<lines.length;i++){
+      const line=lines[i];if(/^Numéro d'observation récurrente\b/i.test(line)){stop=true;break}if(/N°\s*Obs\s+Références réglementaires/i.test(line)||/Non-conformité\s*-\s*Préconisation\s*\(P\)/i.test(line))continue;if(lineIsLocation(line)){currentLocation=cleanLocationText(line);currentEquipment='';continue}if(lineIsEquipment(line)){const c=cleanContextLine(line);if(!isGenericEquipment(c))currentEquipment=c;continue}if(!/\(P\)/i.test(line)||/^\(P\)\s*:\s*Préconisation/i.test(line))continue;
+      const issue=findIssueBeforeP(lines,i),action=actionAfterP(lines,i);if(!action)continue;n++;const no=String(n),kind=observationMarkers?.[no]||'',eq=findLastEquipment(lines,i,currentEquipment);
+      candidates.push(normalizeFindingForApp({title:observationLabel(no,kind),description:issue,action,location:currentLocation,equipment:eq,page:pi+1,sourcePage:pi+1,sourceQuote:[currentLocation,eq,issue,`(P) ${action}`].filter(Boolean).join(' — '),confidence:.97,reportObservationNo:no,observationKind:kind,priority:guessPriority({title:issue,description:issue,action})}));
+    }
+  }
+  if(candidates.length)return{source:'tableau récapitulatif / détection structurée',candidates};return{source:'détection structurée universelle',candidates:fallbackVgpDetection(fullText,pages)};
+}
+function tokenSet(v){return new Set(String(v||'').toLowerCase().split(/[^a-zà-ÿ0-9]+/i).filter(w=>w.length>2))}
+function similarity(a,b){const A=tokenSet(a),B=tokenSet(b);if(!A.size||!B.size)return 0;let n=0;for(const x of A)if(B.has(x))n++;return n/(A.size+B.size-n)}
+function dedupeFindings(items){const out=[];for(const raw of items||[]){const x=normalizeFindingForApp(raw);let dup=false;for(const y of out){const hasObs=x.reportObservationNo&&y.reportObservationNo;const sameObs=hasObs&&String(x.reportObservationNo)===String(y.reportObservationNo);const differentObs=hasObs&&String(x.reportObservationNo)!==String(y.reportObservationNo);if(differentObs)continue;const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>=.8||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>=.94;if(sameObs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push(x)}return out}
+function guessPriority(x){const s=[x?.title,x?.description,x?.action].join(' ').toLowerCase();if(/urgence|masse sous tension|absence de protection|sans protection|choc électrique|risque immédiat|danger imminent/.test(s))return'Critique';if(/éclairage de sécurité|pouvoir de coupure|surcharge|protection|défaut|non.?conforme|anomalie/.test(s))return'Haute';return'Normale'}
+function buildSourceQuote(meta,action){return[meta?.location,meta?.equipment,meta?.issue,`(P) ${action}`].filter(Boolean).join(' — ').replace(/\s+/g,' ').trim()}
+function isHeaderNoise(v){return !v||/^(nouvelle observation|préconisation|références réglementaires|action)$/i.test(v)||v.length<4}
+function fallbackVgpDetection(fullText,pages){
+  const out=[];
+  (pages||[]).forEach((txt,idx)=>{
+    const t=String(txt||'');
+    const cues=/(?:non[\s-]?conforme|NC\b|anomalie|anomalies|défaut|défauts|recommandation|recommandations|préconisation|préconisations)/ig;let m;
+    while((m=cues.exec(t))){
+      const before=t.slice(Math.max(0,m.index-300),m.index),after=t.slice(m.index,Math.min(t.length,m.index+700)),ctx=(before+' '+after).replace(/\s+/g,' ').trim();
+      if(!ctx||ctx.length<30)continue;
+      if(/table des matières|sommaire|légende|exemple|modèle/i.test(ctx)&&!/(action|préconisation|constat|non.?conforme)/i.test(ctx))continue;
+      out.push(normalizeFindingForApp({title:'Constat à vérifier',description:ctx,action:recommendAction(ctx),page:idx+1,sourcePage:idx+1,sourceQuote:ctx.slice(0,380),priority:guessPriority({description:ctx}),confidence:.45}));
+    }
+  });
+  return dedupeFindings(out);
+}
+function recommendAction(ctx){const x=String(ctx||'').toLowerCase();if(/remplacer|réparer/.test(x))return'Appliquer la préconisation du rapport et remettre l’équipement en conformité.';if(/rétablir|remettre à niveau|y remédier|corriger/.test(x))return'Réaliser la remise en conformité demandée par le rapport.';if(/réviser|contrôler|vérifier/.test(x))return'Faire réaliser le contrôle ou la révision prévue et conserver la preuve.';if(/installer|mettre en place/.test(x))return'Mettre en place le dispositif demandé et conserver la preuve.';return'Traiter la non-conformité selon la préconisation du rapport et conserver la preuve de clôture.'}
+
+/* ---------- MOTEUR IA VGP V2 : lecture documentaire, indépendante du format ---------- */
+function aiDefaultSettings(){return{enabled:false,provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta',model:'gemini-3.7-flash',apiKey:'',timeout:90000,chunkPages:5,visionFallback:false}}
+function aiSettingsSafe(){return{...aiDefaultSettings(),...(aiSettings||{})}}
+function splitAiDocument(pageTexts,maxPages=5,overlap=1){
+  const pages=Array.isArray(pageTexts)?pageTexts.map(String):[];const chunks=[];let start=0;
+  while(start<pages.length){const end=Math.min(pages.length,start+maxPages);chunks.push({start,end,text:pages.slice(start,end).map((t,i)=>`--- PAGE ${start+i+1} ---\n${t.slice(0,11000)}`).join('\n\n')});if(end>=pages.length)break;start=end-overlap}
+  return chunks;
+}
+function extractJsonObject(txt){
+  let raw=String(txt||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+  const candidates=[];const objStart=raw.indexOf('{'),arrStart=raw.indexOf('[');
+  if(objStart>=0)candidates.push(raw.slice(objStart));if(arrStart>=0)candidates.push(raw.slice(arrStart));
+  for(const c of candidates){try{return JSON.parse(c)}catch{}}
+  for(const c of candidates){for(let cut=c.length-1;cut>0;cut--){const last=c[cut];if(last!==']'&&last!=='}')continue;try{return JSON.parse(c.slice(0,cut+1))}catch{}}}
+  return null;
+}
+function aiPriority(p){const s=String(p||'').toLowerCase();if(/critique|urgent|immédiat/.test(s))return'Critique';if(/haut|élev|elev|import/.test(s))return'Haute';if(/bas|faible|mineur/.test(s))return'Basse';if(/norm|moy/.test(s))return'Normale';return''}
+function parseAiFindings(txt){
+  const parsed=extractJsonObject(txt);if(!parsed)return[];
+  const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed.findings)?parsed.findings:[]);
+  return arr.filter(x=>x&&typeof x==='object').map(x=>normalizeFindingForApp({
+    ...x,
+    reportObservationNo:x.observation_number??x.reportObservationNo??x.observationNo??'',
+    observationKind:x.novelty??x.observationKind??'',
+    sourceQuote:x.evidence??x.sourceQuote??x.quote??'',
+    description:x.finding??x.description??'',
+    priority:aiPriority(x.priority),
+    origin:'ai'
+  }));
+}
+function aiSystemPrompt(){return `Tu es un expert HSE / vérifications périodiques (VGP) qui construit un PLAN D'ACTION à partir d'un rapport d'organisme de contrôle. Tu LIS le document comme un humain. Familles possibles : Q18 (installations électriques), Q19 (thermographie infrarouge), ATEX / DRPE, appareils de levage (ponts, grues, potences, palans, accessoires), machines / équipements de travail, portes et portails automatiques, chariots élévateurs / engins de manutention, échelles, rayonnages, extincteurs, etc.
+
+Pour CHAQUE non-conformité / observation / anomalie / réserve / préconisation distincte, extrais :
+- page : vraie page du PDF (indiquée dans le texte)
+- observation_number : numéro de l'observation dans le rapport si présent
+- novelty : "Nouvelle observation" ou "Ancienne observation" (récurrente / déjà signalée / non levée lors d'un contrôle précédent). Déduis-le des mentions, légendes, couleurs décrites, colonnes "précédent / N-1", pastilles ou symboles du rapport. Si le rapport ne permet pas de le savoir, laisse "".
+- location : ZONE = bâtiment, atelier, local, quai, étage, armoire, ligne, ou chemin d'emplacement complet
+- equipment : matériel précis (n° de série / repère / désignation / tableau / circuit / porte / chariot...)
+- finding : RAISON de la non-conformité, claire et courte (ce qui ne va pas et, si indiqué, pourquoi c'est un risque)
+- action : ACTION CORRECTIVE demandée ou logiquement déduite de la préconisation du rapport
+- priority : "Critique" (danger immédiat : masse sous tension accessible, point chaud critique, limiteur / frein / arrêt d'urgence HS, zone ATEX non conforme, absence totale de protection), "Haute" (risque grave : choc électrique, échauffement critique, défaut de sécurité de levage, protection insuffisante...), "Normale", ou "Basse" (amélioration, documentation, repérage). Utilise l'indication de criticité du rapport si elle existe.
+- evidence : citation courte du rapport
+
+Règles absolues :
+1. Parcours TOUTES les pages fournies. Aucune limite de nombre.
+2. Une observation distincte = une ligne. Ne fusionne pas deux équipements ou lieux parce que l'action est identique.
+3. Une référence réglementaire (NF C15-100, R.4226-..., EN..., arrêté...) n'est jamais une non-conformité à elle seule et ne doit pas apparaître dans finding ni action.
+4. Ignore : sommaire, pages de garde, méthodologie, rappels réglementaires, points conformes, "sans objet", éléments non évalués sans action, exemples pédagogiques.
+5. Thermographie : un point chaud / écart de température / échauffement anormal est une NC ; indique l'écart ou la température si le rapport la donne.
+6. Levage / chariots / portes : les défauts de sécurité (limiteurs, câbles, crochets, freins, fourches, mât, cellules, bords sensibles, signalisation) sont des NC même si formulés comme "à remplacer" ou "à réparer".
+7. L'ACTION ne contient ni nom d'entreprise, ni localisation, ni référence réglementaire, ni début du constat suivant. Si le rapport donne une préconisation, reprends-la ; sinon formule une action corrective concrète et prudente.
+8. Si un texte est ambigu, ne l'invente pas : laisse le champ vide.
+
+Réponse JSON uniquement :
+{"findings":[{"page":2,"observation_number":"4","novelty":"Nouvelle observation","location":"Bâtiment A — Logistique — Stockage","equipment":"Armoire TGBT","finding":"Absence de protection contre les surcharges sur le circuit","action":"Installer un dispositif de protection adapté à l’intensité admissible du circuit","priority":"Haute","evidence":"Absence de protection de surcharges sur le(s) circuit(s)."}],"pages_covered":[2,3,4,5],"notes":""}`}
+function aiOrientationPrompt(reportFamily,firstPages){return `Tu dois d'abord comprendre la structure de ce rapport ${reportFamily||'VGP'} avant d'en extraire les non-conformités. Identifie uniquement : 1) comment le rapport désigne une observation/anomalie, 2) où se trouvent les actions/préconisations, 3) comment sont indiqués les éléments nouveaux/récurrents si une légende existe, 4) comment les colonnes/lieux/équipements sont organisés. Ne produis pas encore de NC. Réponds en JSON : {"report_family":"...","observation_pattern":"...","action_pattern":"...","novelty_rule":"...","layout_notes":"..."}. Pages :\n\n${firstPages}`}
+function aiChunkPrompt(orientation,chunk,expectedRange){return `CONTEXTE DE STRUCTURE DU RAPPORT : ${JSON.stringify(orientation)}\n\nAnalyse intégralement les pages ${expectedRange}. Cherche toutes les observations/actionnables sur ces pages, y compris si une observation commence sur une page et se termine sur la suivante. Utilise le numéro de page fourni dans le texte.\n\n${chunk}`}
+function aiConsolidationPrompt(orientation,candidates,baselineCount){return `Tu es le contrôleur qualité final d'une extraction de rapport VGP. Voici la règle de structure comprise du document : ${JSON.stringify(orientation)}\nLa pré-analyse indépendante a détecté ${baselineCount} élément(s) structuré(s). Ce nombre est seulement un contrôle, pas une limite.\n\nLes candidats IA proviennent de blocs de pages avec chevauchement. Tu dois :\n- conserver toute observation réellement distincte ;\n- fusionner uniquement un doublon évident issu du chevauchement des pages ;\n- ne jamais fusionner deux observations différentes parce qu'elles ont la même action ;\n- compléter/corriger lieu, équipement, constat, action, numéro et nouveauté lorsque le document le permet ;\n- supprimer seulement les faux positifs manifestes (référence réglementaire seule, exemple, page de garde, sommaire, contrôle conforme, sans objet sans action) ;\n- restituer la liste complète, sans plafond de quantité.\n\nRetour JSON uniquement : {"findings":[...],"total":N,"quality_notes":"..."}\n\nCANDIDATS :\n${JSON.stringify(candidates)}`}
+async function fetchWithTimeout(url,options,ms){const controller=new AbortController();const t=setTimeout(()=>controller.abort(),ms);try{return await fetch(url,{...options,signal:controller.signal})}catch(e){if(e?.name==='AbortError')throw new Error(`Délai dépassé (${Math.round(ms/1000)} s)`);throw e}finally{clearTimeout(t)}}
+let AI_RETRY_DELAYS=[3000,6000,12000,20000];
+function aiShowStatus(msg){const el=document.getElementById('aiActionStatus')||document.getElementById('aiReportStatus');if(el)el.textContent=msg}
+async function callAiEndpointV2(prompt,opts={}){
+  let lastErr;
+  // Une seule relance courte : l'objectif est de ne jamais laisser l'interface
+  // bloquée pendant plusieurs minutes sur un 503 Gemini.
+  for(let attempt=0;attempt<2;attempt++){
+    try{return await callAiEndpointOnce(prompt,opts)}
+    catch(e){
+      lastErr=e;
+      if(!isTransientAiError(e)||attempt===1)break;
+      const wait=3500;
+      aiShowStatus(`Gemini temporairement indisponible — nouvelle tentative dans ${Math.round(wait/1000)} s…`);
+      await new Promise(r=>setTimeout(r,wait));
+    }
+  }
+  const cfg0=aiSettingsSafe();
+  const prov=opts.provider||cfg0.provider;
+  if(prov==='gemini'&&!opts.noFallback&&cfg0.apiKey&&isTransientAiError(lastErr)){
+    const cur=opts.model||cfg0.model;
+    // Fallbacks Gemini uniquement. Pas d'autre moteur IA.
+    const list=['gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash-lite'].filter(x=>x!==cur);
+    for(const m of list){
+      aiShowStatus(`Gemini ${cur} indisponible — essai avec ${m}…`);
+      try{
+        const out=await callAiEndpointOnce(prompt,{...opts,model:m,noFallback:true});
+        aiSettings={...aiSettings,provider:'gemini',model:m,apiKey:cfg0.apiKey};
+        db.aiSettings={...(db.aiSettings||{}),provider:'gemini',model:m,endpoint:cfg0.endpoint,enabled:true,timeout:cfg0.timeout,chunkPages:cfg0.chunkPages,visionFallback:cfg0.visionFallback};
+        saveDB();
+        localStorage.setItem('sgeAiSessionKey',cfg0.apiKey);
+        toast(`Gemini utilise maintenant ${m}.`);
+        return out;
+      }catch(e2){
+        lastErr=e2;
+        if(!isTransientAiError(e2))break;
+      }
+    }
+  }
+  throw lastErr||new Error('Gemini n’a pas répondu.');
+}
+function isTransientAiError(e){const m=String(e?.message||e);return [429,500,502,503,504].includes(e?.status)||/high demand|overloaded|unavailable|try again|temporar|rate limit|resource.?exhausted|Délai dépassé|Failed to fetch|Load failed|NetworkError/i.test(m)}
+let __geminiModelCache=null;
+async function geminiFallbackModels(cfg){
+  if(!__geminiModelCache){
+    const base=String(cfg.endpoint||'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/,'').replace(/\/models\/.*$/,'');
+    const res=await fetchWithTimeout(base+'/models?pageSize=200',{headers:{'x-goog-api-key':cfg.apiKey}},20000);const d=await res.json();
+    const names=(d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>String(m.name).replace(/^models\//,'')).filter(n=>/^gemini-/.test(n)&&!/image|tts|live|embed|audio|robotics|computer|exp|vision|learnlm/i.test(n));
+    const rank=n=>/flash/.test(n)&&!/lite/.test(n)?0:/flash-lite|lite/.test(n)?1:2;
+    __geminiModelCache=names.sort((a,b)=>rank(a)-rank(b)||b.localeCompare(a,undefined,{numeric:true}));
+  }
+  return __geminiModelCache;
+}
+function geminiFindingResponseSchema(){
+  return {
+    type:'object',
+    properties:{
+      findings:{
+        type:'array',
+        items:{
+          type:'object',
+          properties:{
+            page:{type:'integer'},
+            observation_number:{type:'string'},
+            novelty:{type:'string'},
+            location:{type:'string'},
+            equipment:{type:'string'},
+            finding:{type:'string'},
+            action:{type:'string'},
+            priority:{type:'string'},
+            evidence:{type:'string'}
+          },
+          required:['page','observation_number','novelty','location','equipment','finding','action','priority','evidence']
+        }
+      },
+      total_observations_detected:{type:'integer'},
+      pages_covered:{type:'array',items:{type:'integer'}},
+      notes:{type:'string'}
+    },
+    required:['findings','total_observations_detected','pages_covered','notes']
+  };
+}
+async function callAiEndpointOnce(prompt,opts={}){
+  const cfg=aiSettingsSafe();const endpoint=String(opts.endpoint||cfg.endpoint||'').trim(),model=String(opts.model||cfg.model||'').trim();if(!endpoint||!model)throw new Error('Endpoint ou modèle IA manquant.');
+  const provider=opts.provider||cfg.provider||'ollama';const headers={'Content-Type':'application/json'};if(cfg.apiKey&&provider==='gemini')headers['x-goog-api-key']=cfg.apiKey;else if(cfg.apiKey&&provider!=='ollama')headers.Authorization=`Bearer ${cfg.apiKey}`;
+  let body,url=endpoint;
+  if(provider==='gemini'){
+    url=endpoint.replace(/\/+$/,'').replace(/\/models\/.*$/,'')+`/models/${encodeURIComponent(model)}:generateContent`;
+    body={systemInstruction:{parts:[{text:aiSystemPrompt()}]},contents:[{role:'user',parts:[...(opts.pdfBase64?[{inlineData:{mimeType:'application/pdf',data:opts.pdfBase64}}]:[]),{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:32768,...(opts.plain?{}:{responseMimeType:'application/json',...(opts.responseSchema?{responseSchema:opts.responseSchema}:{})})}};
+  }
+  else if(provider==='ollama')body={model,messages:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}],stream:false,options:{temperature:0}};
+  else if(provider==='responses')body={model,input:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}]};
+  else body={model,messages:[{role:'system',content:aiSystemPrompt()},{role:'user',content:prompt}],temperature:0,stream:false};
+  const res=await fetchWithTimeout(url,{method:'POST',headers,body:JSON.stringify(body)},Math.max(Number(cfg.timeout)||90000,opts.pdfBase64?240000:0));let data=null;let textBody='';try{data=await res.json()}catch{try{textBody=await res.text()}catch{}}
+  if(!res.ok){const msg=data?.error?.message||data?.error||textBody||`HTTP ${res.status}`;{const err=new Error(String(msg).slice(0,500));err.status=res.status;throw err}}
+  return data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||data?.choices?.[0]?.message?.content||data?.message?.content||data?.response||data?.output_text||data?.output?.flatMap?.(x=>x.content||[]).map?.(x=>x.text||'').join?.('')||'';
+}
+async function testAiV2(){
+  const btn=[...document.querySelectorAll('button')].find(b=>/Tester la connexion IA/i.test(b.textContent));
+  const provider=document.getElementById('aiProvider')?.value||aiSettings.provider||'ollama';const endpoint=String(document.getElementById('aiEndpoint')?.value||'').trim();const model=String(document.getElementById('aiModel')?.value||'').trim();const apiKey=String(document.getElementById('aiApiKey')?.value||'').trim();
+  if(!endpoint||!model)return showAiDiagnostic('err','Renseigne l’endpoint et le modèle avant le test.');
+  aiSettings={...aiSettings,enabled:true,provider,endpoint,model,apiKey};localStorage.setItem('sgeAiSessionKey',apiKey);
+  if(btn){btn.disabled=true;btn.textContent='⏳ Test en cours…'}
+  try{const reply=await callAiEndpointV2('Réponds uniquement par OK.',{provider,endpoint,model,plain:true});showAiDiagnostic('ok',`Connexion IA réussie. Réponse reçue : ${String(reply||'OK').slice(0,120)}`);saveAiSettings(true)}catch(e){showAiDiagnostic('err',`Échec de connexion IA : ${e?.message||e}. ${provider==='gemini'?'Vérifie la clé et le nom du modèle (ex. gemini-3.8-flash).':'Pour Ollama local, il faut qu’Ollama soit démarré et autorise les requêtes depuis le navigateur.'}`)}finally{if(btn){btn.disabled=false;btn.textContent='Tester la connexion IA'}}
+}
+function showAiDiagnostic(kind,msg){const el=document.getElementById('aiDiagnostic');if(el){el.className=`ai-diag ${kind||''}`;el.textContent=msg}}
+async function analyzeWithAiEngine(reportId){
+  const r=db.vgpReports.find(x=>String(x.id)===String(reportId));if(!r?.ai?.pageTexts?.length)throw new Error('PDF non chargé.');
+  const cfg=aiSettingsSafe();if(!cfg.enabled)throw new Error('IA externe désactivée dans Paramètres.');
+  aiBusy=true;r.ai={...(r.ai||{}),aiEngineVersion:'V2',aiStartedAt:new Date().toISOString(),status:'Compréhension de la structure du rapport…'};saveDB();render();
+  try{
+    const family=detectReportFamily(r.ai.rawText,r);r.ai.reportFamily=family;
+    const first=r.ai.pageTexts.slice(0,Math.min(8,r.ai.pageTexts.length)).map((t,i)=>`--- PAGE ${i+1} ---\n${String(t).slice(0,9000)}`).join('\n\n');
+    let orientation={report_family:family,observation_pattern:'à déterminer',action_pattern:'à déterminer',novelty_rule:'',layout_notes:''};
+    try{const orientReply=await callAiEndpointV2(aiOrientationPrompt(family,first));const orientJson=extractJsonObject(orientReply);if(orientJson&&typeof orientJson==='object')orientation={...orientation,...orientJson}}catch(e){r.ai.orientationWarning=e.message||String(e)}
+    r.ai.orientation=orientation;
+    const chunks=splitAiDocument(r.ai.pageTexts,Math.max(3,Math.min(8,Number(cfg.chunkPages)||5)),1),all=[];const failedChunks=[];let lastChunkErr=null;
+    for(let i=0;i<chunks.length;i++){
+      const c=chunks[i];r.ai.status=`Lecture IA du rapport : bloc ${i+1}/${chunks.length} — pages ${c.start+1} à ${c.end}`;saveDB();render();
+      try{const reply=await callAiEndpointV2(aiChunkPrompt(orientation,c.text,`${c.start+1} à ${c.end}`));const found=parseAiFindings(reply);for(const f of found)all.push({...f,chunkIndex:i,origin:'ai'})}catch(e){failedChunks.push(`pages ${c.start+1}-${c.end}`);lastChunkErr=e}
+    }
+    if(failedChunks.length===chunks.length)throw lastChunkErr||new Error('Analyse IA impossible.');const cleaned=dedupeAiCandidates(all);r.ai.aiRawCandidates=cleaned;
+    r.ai.status=`Vérification croisée de ${cleaned.length} proposition(s)…`;saveDB();render();
+    let final=cleaned;
+    if(cleaned.length){
+      const compact=cleaned.map((x,i)=>({id:i,page:x.page,observation_number:x.reportObservationNo||'',novelty:x.observationKind||'',location:x.location||'',equipment:x.equipment||'',finding:x.description||x.title||'',action:x.action||'',evidence:x.sourceQuote||''}));
+      try{const consolidation=await callAiEndpointV2(aiConsolidationPrompt(orientation,compact,r.ai.structuredCount||0));const cf=parseAiFindings(consolidation);if(cf.length>=Math.max(1,Math.floor(cleaned.length*.7)))final=dedupeAiCandidates(cf)}catch(e){console.warn('consolidation ignorée',e)}
+    }
+    const structured=extractVgpObservationSummary(r.ai.rawText,r.ai.pageTexts||[],r.ai.observationMarkers||{}).candidates.map(x=>({...x,origin:'structured'}));
+    r.ai.structuredCount=structured.length;r.ai.candidates=mergeAiAndStructured(structured,final);r.ai.aiCount=final.length;r.ai.status=`Analyse IA terminée : ${r.ai.candidates.length} proposition(s)${failedChunks.length?` — ⚠ ${failedChunks.length} bloc(s) en échec (${failedChunks.join(', ')}) : relance l’analyse pour les compléter`:''}.`;r.ai.aiFinishedAt=new Date().toISOString();saveDB();toast(`Analyse IA terminée : ${r.ai.candidates.length} proposition(s).`);
+  }finally{aiBusy=false;saveDB();render()}
+}
+function dedupeAiCandidates(items){
+  const out=[];
+  for(const raw of items||[]){const x=normalizeFindingForApp(raw);if(!x.description&&!x.action)continue;let dup=false;for(const y of out){const hasObs=x.reportObservationNo&&y.reportObservationNo;const obs=hasObs&&String(x.reportObservationNo)===String(y.reportObservationNo);const differentObs=hasObs&&String(x.reportObservationNo)!==String(y.reportObservationNo);if(differentObs)continue;const samePage=String(x.page||'')===String(y.page||'');const sameLoc=similarity(x.location,y.location)>.75||(!x.location&&!y.location);const sameCore=similarity((x.description||x.title)+' '+(x.action||''),(y.description||y.title)+' '+(y.action||''))>.93;if(obs||(samePage&&sameLoc&&sameCore)){dup=true;break}}if(!dup)out.push({...x,id:uid('AIC'),origin:'ai'})}return out}
+function mergeAiAndStructured(structured,aiFound){
+  /*
+   * Le principe important ici : l'extraction locale sert de filet de sécurité.
+   * Une NC trouvée dans le tableau récapitulatif ne doit JAMAIS disparaître
+   * simplement parce que Gemini en a retourné moins.
+   */
+  const out=[];const usedAi=new Set();
+  for(const b0 of structured||[]){
+    const b=normalizeFindingForApp({...b0,id:uid('AIC'),origin:'structured'});
+    let best=-1,score=0;
+    for(let i=0;i<(aiFound||[]).length;i++){
+      if(usedAi.has(i))continue;
+      const a=aiFound[i];
+      const obs=b.reportObservationNo&&a.reportObservationNo&&String(b.reportObservationNo)===String(a.reportObservationNo)?1:0;
+      const page=String(b.page||'')===String(a.page||'')?.25:0;
+      const loc=similarity(b.location,a.location)*.2;
+      const core=similarity((b.description||'')+' '+(b.action||''),(a.description||'')+' '+(a.action||''))*.55;
+      const sc=obs*.7+page+loc+core;
+      if(sc>score){best=i;score=sc}
+    }
+    if(best>=0&&score>=.6){
+      const a=aiFound[best];usedAi.add(best);
+      out.push(normalizeFindingForApp({
+        ...b,
+        description:a.description||b.description,
+        action:a.action||b.action,
+        location:a.location||b.location,
+        equipment:a.equipment||b.equipment,
+        observationKind:a.observationKind||b.observationKind,
+        sourceQuote:a.sourceQuote||b.sourceQuote,
+        confidence:Math.max(Number(a.confidence||0),Number(b.confidence||0)),
+        origin:'ai-review'
+      }));
+    }else{
+      /* Ne jamais supprimer le candidat structuré : c'est notre filet anti-oubli. */
+      out.push(b);
+    }
+  }
+  for(let i=0;i<(aiFound||[]).length;i++){
+    if(!usedAi.has(i))out.push(normalizeFindingForApp({...aiFound[i],origin:'ai-added'}));
+  }
+  return dedupeFindings(out);
+}
+async function runCompleteAi(reportId){
+  const status=document.getElementById('aiActionStatus');const btn=document.getElementById('completeAiBtn');if(status)status.textContent='Analyse IA documentaire en cours…';if(btn){btn.disabled=true;btn.textContent='⏳ Lecture IA…'}
+  try{await analyzeWithAiEngine(reportId);}
+  catch(e){console.error(e);const r=db.vgpReports.find(x=>String(x.id)===String(reportId));if(r){r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e.message||e}`};saveDB()}if(status)status.textContent=`Erreur IA : ${e.message||e}`;toast('Erreur IA : '+(e?.message||e));render()}
+}
+async function reviewWithAi(reportId){return runCompleteAi(reportId)}
+function findingPayloadFromCandidate(c,reportId){const n=normalizeFindingForApp({...c,origin:c.origin||'ai'});return{id:uid('VGP-NC'),reportId,title:n.reportObservationNo?observationLabel(n.reportObservationNo,n.observationKind):String(n.title||'Non-conformité').slice(0,120),description:String(n.description||'').slice(0,320),action:cleanActionText(n.action).slice(0,320),location:cleanLocationText(n.location).slice(0,220),equipment:cleanHumanText(n.equipment).slice(0,180),owner:'',due:'',priority:n.priority||'Normale',status:'À traiter',sourcePage:n.page||n.sourcePage||'',sourceQuote:String(n.sourceQuote||n.description||'').slice(0,500),origin:n.origin||'ai',reportObservationNo:n.reportObservationNo||'',observationKind:n.observationKind||'',novelty:n.observationKind||'',created:new Date().toISOString()}}
+function acceptAllAiCandidates(reportId){
+  const r=db.vgpReports.find(x=>String(x.id)===String(reportId)),status=document.getElementById('aiActionStatus');if(!r)return toast('Rapport introuvable.');const candidates=Array.isArray(r.ai?.candidates)?r.ai.candidates.slice():[];
+  if(!candidates.length){if(status)status.textContent='Aucune proposition IA à ajouter.';return toast('Aucune proposition IA à ajouter.')}
+  let added=0,already=0;for(const c of candidates){const payload=findingPayloadFromCandidate(c,reportId);const duplicate=payload.reportObservationNo?db.vgpFindings.some(f=>String(f.reportId)===String(reportId)&&String(f.reportObservationNo)===String(payload.reportObservationNo)):db.vgpFindings.some(f=>String(f.reportId)===String(reportId)&&String(f.sourcePage||'')===String(payload.sourcePage||'')&&similarity((f.description||f.title)+' '+(f.action||''),(payload.description||payload.title)+' '+payload.action)>=.92);if(duplicate){already++;continue}db.vgpFindings.push(payload);added++}
+  r.ai.candidates=[];r.ai.status=`Plan mis à jour : ${added} ajoutée(s)${already?`, ${already} déjà présente(s)`:''}.`;saveDB();render();toast(added?`${added} NC ajoutée(s) au plan.`:'Aucune nouvelle NC à ajouter.')
+}
+function acceptAiCandidate(reportId,index){const r=db.vgpReports.find(x=>String(x.id)===String(reportId)),c=r?.ai?.candidates?.[index];if(!r||!c)return toast('Proposition IA introuvable.');const payload=findingPayloadFromCandidate(c,reportId);const duplicate=payload.reportObservationNo&&db.vgpFindings.some(f=>String(f.reportId)===String(reportId)&&String(f.reportObservationNo)===String(payload.reportObservationNo));if(duplicate)return toast(`L’observation ${payload.reportObservationNo} est déjà dans le plan.`);db.vgpFindings.push(payload);r.ai.candidates.splice(index,1);r.ai.status=`Observation ${payload.reportObservationNo||''} ajoutée au plan d’action.`.trim();saveDB();render();toast('Proposition ajoutée au plan d’action.')}
+function editAiCandidate(reportId,index){const r=db.vgpReports.find(x=>String(x.id)===String(reportId)),c=r?.ai?.candidates?.[index];if(!c)return;showModal(`<div class="modalhead"><h2>Valider / modifier la proposition IA</h2><button class="x" onclick="closeModal()">×</button></div><div class="notice blue">Vérifie la proposition avant de l’ajouter au plan d’action.</div><form id="aiEditForm"><div class="formgrid"><div class="field"><label>N° observation</label><input name="reportObservationNo" value="${esc(c.reportObservationNo||'')}" maxlength="10"></div><div class="field"><label>Type</label><input name="observationKind" value="${esc(c.observationKind||'')}" maxlength="40"></div><div class="field span2"><label>Intitulé court</label><input name="title" value="${esc(c.title||'')}" maxlength="120"></div><div class="field span2"><label>Lieu</label><input name="location" value="${esc(c.location||'')}" maxlength="220"></div><div class="field span2"><label>Équipement / sous-lieu</label><input name="equipment" value="${esc(c.equipment||'')}" maxlength="180"></div><div class="field span2"><label>Constat / non-conformité</label><textarea name="description" maxlength="320">${esc(c.description||'')}</textarea></div><div class="field span2"><label>Action à réaliser</label><textarea name="action" maxlength="320">${esc(c.action||'')}</textarea></div><div class="field"><label>Page</label><input name="page" value="${esc(c.page||'')}"></div><div class="field"><label>Priorité</label><select name="priority">${['Basse','Normale','Haute','Critique'].map(x=>`<option ${x===(c.priority||'Normale')?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Ajouter au plan</button></div></form>`);document.getElementById('aiEditForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));Object.assign(c,d);acceptAiCandidate(reportId,index);closeModal()}}
+
+function openReportForm(id,typeKey){
+  const existing=id?db.vgpReports.find(x=>x.id===id):null;
+  const t=typeKey?vgpType(typeKey):existing?vgpType(existing.vgpKey||existing.reportType):vgpType(db.vgpTypes[0]?.key);
+  const insp=existing?.inspection||now();
+  const eq=equipmentForType(t.key);
+  showModal(`<div class="modalhead"><div><h2>${existing?'Modifier le rapport':'Nouveau rapport VGP'}</h2><div class="small muted">${esc(t.name)} • périodicité ${t.periodicityMonths} mois</div></div><button class="x" onclick="closeModal()">×</button></div>
+  <form id="reportForm"><div class="formgrid">
+    <div class="field"><label>Type</label><select name="vgpKey" id="reportVgpType">${allTypes().map(x=>`<option value="${esc(x.key)}" ${x.key===t.key?'selected':''}>${esc(x.code)} — ${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Référence du rapport *</label><input name="reportNumber" value="${esc(existing?.reportNumber||'')}" placeholder="Ex. 2026-Q18-01" required></div>
+    <div class="field"><label>Équipement / identifiant *</label><input name="equipment" value="${esc(existing?.equipment||'')}" placeholder="Ex. Armoire TGBT / Pont N°…" required></div>
+    <div class="field"><label>Localisation / secteur *</label><input name="location" value="${esc(existing?.location||'')}" placeholder="Bâtiment, atelier, zone…" required></div>
+    <div class="field"><label>Organisme de vérification</label><input name="organism" value="${esc(existing?.organism||'')}" placeholder="Apave, Bureau Veritas, Socotec…"></div>
+    <div class="field"><label>Date de vérification *</label><input type="date" name="inspection" value="${esc(insp)}" required></div>
+    <div class="field"><label>Prochaine échéance</label><input type="date" name="next" value="${esc(existing?.next||reportNext(t,insp))}"></div>
+    <div class="field"><label>Statut global</label><select name="status">${['À traiter','En cours','Conforme','Clôturé'].map(x=>`<option ${x===(existing?.status||'À traiter')?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="field span2"><label>Commentaire</label><textarea name="notes" placeholder="Observations générales, références internes…">${esc(existing?.notes||'')}</textarea></div>
+  </div><div class="notice green">Tu pourras ensuite déposer le PDF du rapport dans la fiche et lancer l’analyse IA. Les non-conformités proposées seront séparées de celles déjà validées.</div>
+  <div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('reportForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const nt=vgpType(d.vgpKey);if(!d.next)d.next=reportNext(nt,d.inspection);
+    if(existing){Object.assign(existing,d,{updated:new Date().toISOString()});saveDB();closeModal();openReport(existing.id);toast('Rapport mis à jour.')}
+    else{const r={id:uid('VGP'),created:new Date().toISOString(),...d,ai:null};db.vgpReports.push(r);saveDB();closeModal();openReport(r.id);toast('Rapport créé.')}
+  }
+}
+function deleteReport(id){const r=db.vgpReports.find(x=>x.id===id);if(!r)return;if(!confirm('Supprimer ce rapport et son plan d’action ?'))return;db.vgpFindings=db.vgpFindings.filter(x=>x.reportId!==id);db.vgpReports=db.vgpReports.filter(x=>x.id!==id);saveDB();openVgpType(r.vgpKey||r.reportType);toast('Rapport supprimé.')}
+function openFindingForm(id,reportId){const existing=id?db.vgpFindings.find(x=>x.id===id):null;if(existing){Object.assign(existing,normalizeFindingForApp(existing));if(existing.reportObservationNo)existing.title=observationLabel(existing.reportObservationNo,existing.observationKind);saveDB();}const r=reportId?db.vgpReports.find(x=>x.id===reportId):existing?db.vgpReports.find(x=>x.id===existing.reportId):null;const label=existing?.reportObservationNo?observationLabel(existing.reportObservationNo,existing.observationKind):'';showModal(`<div class="modalhead"><h2>${existing?'Modifier la non-conformité':'Ajouter une non-conformité'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="findingForm"><div class="formgrid">${r?`<div class="field"><label>Rapport</label><input value="${esc(r.reportNumber||r.id)}" readonly></div>`:''}${existing?.reportObservationNo?`<div class="field"><label>Observation</label><input value="${esc(label)}" readonly></div>`:''}<div class="field span2"><label>Intitulé</label><input name="title" value="${esc(existing?.title||'')}" maxlength="100" ${existing?.reportObservationNo?'readonly':''}></div><div class="field span2"><label>Lieu</label><input name="location" value="${esc(existing?.location||'')}" maxlength="180" placeholder="Bâtiment / atelier / zone"></div><div class="field span2"><label>Équipement / sous-lieu</label><input name="equipment" value="${esc(existing?.equipment||'')}" maxlength="140"></div><div class="field span2"><label>Constat / non-conformité</label><textarea name="description" maxlength="280">${esc(existing?.description||'')}</textarea></div><div class="field span2"><label>Action à réaliser</label><textarea name="action" maxlength="260">${esc(existing?.action||'')}</textarea></div><div class="field"><label>Responsable</label><input name="owner" value="${esc(existing?.owner||'')}" placeholder="Nom / service / entreprise"></div><div class="field"><label>Échéance</label><input type="date" name="due" value="${esc(existing?.due||'')}"></div><div class="field"><label>Priorité</label><select name="priority">${['Basse','Normale','Haute','Critique'].map(x=>`<option ${x===(existing?.priority||'Normale')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Statut</label><select name="status">${['À traiter','En cours','Clôturée','Annulée'].map(x=>`<option ${x===(existing?.status||'À traiter')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Page du rapport</label><input name="sourcePage" value="${esc(existing?.sourcePage||'')}" readonly></div><div class="field"><label>Origine</label><input value="${esc(existing?.origin==='ai'?'IA':existing?.origin==='structured'?'Extraction structurée':'Saisie manuelle')}" readonly></div><div class="field span2"><label>Extrait justificatif du rapport</label><textarea name="sourceQuote">${esc(existing?.sourceQuote||'')}</textarea></div></div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button>${existing?`<button type="button" class="btn danger" onclick="closeModal();deleteFinding('${existing.id}')">Supprimer</button>`:''}<button class="btn primary">Enregistrer</button></div></form>`);document.getElementById('findingForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.title=String(d.title||'').slice(0,100);d.description=cleanHumanText(d.description).slice(0,280);d.action=cleanActionText(d.action).slice(0,260);d.location=cleanLocationText(d.location).slice(0,180);d.equipment=cleanHumanText(d.equipment).slice(0,140);if(existing){Object.assign(existing,d,{updated:new Date().toISOString()});saveDB();closeModal();if(r)openReport(r.id);else render();toast('Non-conformité mise à jour.')}else{const f={id:uid('VGP-NC'),reportId:r?.id||'',created:new Date().toISOString(),origin:'manual',reportObservationNo:'',observationKind:'',...d};db.vgpFindings.push(f);saveDB();closeModal();if(r)openReport(r.id);else render();toast('Non-conformité ajoutée.')}}}
+function deleteFinding(id){db.vgpFindings=db.vgpFindings.filter(x=>x.id!==id);saveDB();render();toast('Non-conformité supprimée.')}
+function openEquipmentForm(id,typeKey){
+  const existing=id?db.vgpEquipment.find(x=>x.id===id):null;const t=vgpType(typeKey||existing?.vgpKey);
+  showModal(`<div class="modalhead"><h2>${existing?'Modifier l’équipement':'Ajouter un équipement'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="equipmentForm"><div class="formgrid">
+  <div class="field"><label>VGP</label><select name="vgpKey">${allTypes().map(x=>`<option value="${esc(x.key)}" ${x.key===t.key?'selected':''}>${esc(x.code)} — ${esc(x.name)}</option>`).join('')}</select></div>
+  <div class="field"><label>Nom de l’équipement *</label><input name="name" value="${esc(existing?.name||'')}" required></div>
+  <div class="field"><label>Identifiant / N° série</label><input name="identifier" value="${esc(existing?.identifier||'')}"></div>
+  <div class="field"><label>Localisation</label><input name="location" value="${esc(existing?.location||'')}"></div>
+  <div class="field"><label>Dernière vérification</label><input type="date" name="lastInspection" value="${esc(existing?.lastInspection||'')}"></div>
+  <div class="field"><label>Prochaine échéance</label><input type="date" name="nextDue" value="${esc(existing?.nextDue||'')}"></div>
+  <div class="field"><label>Criticité</label><select name="criticality">${['Faible','Normale','Importante','Critique'].map(x=>`<option ${x===(existing?.criticality||'Normale')?'selected':''}>${x}</option>`).join('')}</select></div>
+  <div class="field"><label>Responsable du suivi</label><input name="owner" value="${esc(existing?.owner||'')}"></div>
+  <div class="field span2"><label>Observations</label><textarea name="notes">${esc(existing?.notes||'')}</textarea></div>
+  </div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('equipmentForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(existing){Object.assign(existing,d);saveDB();closeModal();render();toast('Équipement mis à jour.')}else{const item={id:uid('EQ'),created:new Date().toISOString(),...d};db.vgpEquipment.push(item);saveDB();closeModal();render();toast('Équipement ajouté.')}}
+}
+function deleteEquipment(id){if(!confirm('Supprimer cet équipement ?'))return;db.vgpEquipment=db.vgpEquipment.filter(x=>x.id!==id);saveDB();render();}
+
+function openVgpTypeForm(typeKey){
+  const ex=typeKey?vgpType(typeKey):null;
+  showModal(`<div class="modalhead"><h2>${ex?'Modifier la famille VGP':'Ajouter une famille VGP'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="typeForm"><div class="formgrid">
+  <div class="field"><label>Nom *</label><input name="name" value="${esc(ex?.name||'')}" required></div>
+  <div class="field"><label>Code *</label><input name="code" value="${esc(ex?.code||'')}" required></div>
+  <div class="field span2"><label>Description</label><input name="desc" value="${esc(ex?.desc||'')}"></div>
+  <div class="field"><label>Périodicité (mois)</label><input type="number" min="1" max="120" name="periodicityMonths" value="${esc(ex?.periodicityMonths||12)}"></div>
+  <div class="field"><label>Alerte avant échéance (jours)</label><input type="number" min="1" max="365" name="alertDays" value="${esc(ex?.alertDays||30)}"></div>
+  </div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button>${ex&&!VGP_DEFAULTS.some(d=>d.key===ex.key)?`<button type="button" class="btn danger" onclick="closeModal();deleteVgpType('${esc(ex.key)}')">Supprimer</button>`:''}<button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('typeForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const key=(ex?.key||d.code).toUpperCase().replace(/[^A-Z0-9_-]+/g,'_');if(ex){Object.assign(ex,{...d,periodicityMonths:Number(d.periodicityMonths)||12,alertDays:Number(d.alertDays)||30,icon:ex.icon||'⚙'});}else{db.vgpTypes.push({key,code:d.code.toUpperCase(),name:d.name,icon:'⚙',desc:d.desc,periodicityMonths:Number(d.periodicityMonths)||12,alertDays:Number(d.alertDays)||30});}saveDB();closeModal();render();toast('Famille VGP enregistrée.')};
+}
+function deleteVgpType(key){if(reportsForType(key).length||equipmentForType(key).length){alert('Cette famille possède encore des équipements ou rapports.');return}db.vgpTypes=db.vgpTypes.filter(x=>x.key!==key);saveDB();backVgpHome();}
+
+function exportVgpPlan(){
+  const rows=[['Réf NC','Rapport','Date','Équipement','Localisation','Constat','Action','Responsable','Échéance','Priorité','Statut','Page','Origine'],...db.vgpFindings.map(f=>{const r=db.vgpReports.find(x=>x.id===f.reportId);return [f.id,r?.reportNumber||'',r?.inspection||'',r?.equipment||'',r?.location||'',f.description||f.title||'',f.action||'',f.owner||'',f.due||'',f.priority||'Normale',findingStatus(f),f.sourcePage||'',f.origin==='ai'?'IA':'Saisie']})];
+  download('plan_action_vgp.csv',rows.map(r=>r.map(csvCell).join(';')).join('\\n'),'text/csv;charset=utf-8');
+}
+function csvCell(x){const s=String(x??'');return `"${s.replace(/"/g,'""')}"`}
+function download(name,content,type='text/plain;charset=utf-8'){const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+function chemicalProducts(){
+  return db.chemicalProducts.map(p=>({ ...p, fdsStatus:chemicalFdsStatus(p)}))
+}
+function chemicalFdsStatus(p){
+  if(!p.fdsAvailable||!p.fdsRevisionDate)return{key:'missing',label:'FDS absente',date:''};
+  const exp=addYears(p.fdsRevisionDate,Number(db.chemicalSettings.fdsAgeYears)||5),soon=addMonths(now,Number(db.chemicalSettings.alertMonths)||6);
+  if(exp<now())return{key:'late',label:'FDS périmée',date:exp};if(exp<=soon)return{key:'soon',label:'Échéance proche',date:exp};return{key:'ok',label:'FDS à jour',date:exp}
+}
+function chemicalStats(){
+  const p=chemicalProducts();return {total:p.length,ok:p.filter(x=>x.fdsStatus.key==='ok').length,soon:p.filter(x=>x.fdsStatus.key==='soon').length,late:p.filter(x=>x.fdsStatus.key==='late').length,missing:p.filter(x=>x.fdsStatus.key==='missing').length,requests:db.chemicalRequests.filter(x=>x.status==='À examiner').length}
+}
+function chemicalPage(el){
+  const s=chemicalStats();
+  el.innerHTML=`<div class="pagehead"><div><h1>Risque chimique</h1><div class="muted">Inventaire des produits, FDS, unités de travail, demandes d’acceptation et actions de prévention.</div></div><div class="page-actions"><button class="btn" onclick="exportChemicalCSV()">⇩ Export inventaire</button><button class="btn primary" onclick="openChemicalForm()">＋ Nouveau produit</button></div></div>
+  <div class="grid chemical-summary">
+   <div class="card"><div class="stat-label">Produits</div><div class="stat-value">${s.total}</div><div class="stat-foot">Inventaire actuel</div></div>
+   <div class="card"><div class="stat-label">FDS à jour</div><div class="stat-value">${s.ok}</div><div class="stat-foot"><span class="fds-ok">${s.total?s.ok/s.total*100|0:0}%</span></div></div>
+   <div class="card"><div class="stat-label">FDS proches</div><div class="stat-value">${s.soon}</div><div class="stat-foot">selon ton seuil</div></div>
+   <div class="card"><div class="stat-label">FDS périmées</div><div class="stat-value">${s.late}</div><div class="stat-foot">${s.late?'À régulariser':'Aucune'}</div></div>
+   <div class="card"><div class="stat-label">FDS absentes</div><div class="stat-value">${s.missing}</div><div class="stat-foot">${s.requests} demande(s) à examiner</div></div>
+  </div>
+  <div class="chem-tabs"><button class="chem-tab ${chemicalTab==='products'?'active':''}" onclick="chemicalTab='products';render()">🧪 Produits</button><button class="chem-tab ${chemicalTab==='requests'?'active':''}" onclick="chemicalTab='requests';render()">📨 Demandes</button><button class="chem-tab ${chemicalTab==='actions'?'active':''}" onclick="chemicalTab='actions';render()">☷ Actions</button><button class="chem-tab ${chemicalTab==='settings'?'active':''}" onclick="chemicalTab='settings';render()">⚙ Paramètres</button></div>
+  ${chemicalTab==='products'?chemicalProductsTab():chemicalTab==='requests'?chemicalRequestsTab():chemicalTab==='actions'?chemicalActionsTab():chemicalSettingsTab()}`;
+}
+function chemicalProductsTab(){
+  const ps=chemicalProducts().slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr'));
+  return `<div class="card"><div class="toolbar"><input id="chemSearch" placeholder="Rechercher produit, fournisseur, zone…" oninput="filterChem()"><select id="chemFds" onchange="filterChem()"><option value="">Toutes les FDS</option><option value="ok">À jour</option><option value="soon">Échéance proche</option><option value="late">Périmée</option><option value="missing">Absente</option></select><select id="chemStatus" onchange="filterChem()"><option value="">Tous statuts</option><option>Actif</option><option>En attente</option><option>Supprimé</option></select></div>
+  <div id="chemTable" class="tablewrap m-cards"><table><thead><tr><th>Produit</th><th>FDS</th><th>Dangers</th><th>Unités de travail</th><th>Usage</th><th>Statut</th><th></th></tr></thead><tbody>${ps.length?ps.map(p=>`<tr data-search="${esc([p.name,p.manufacturer,p.supplier,(p.workUnits||[]).join(' '),p.usage,p.hStatements].join(' ').toLowerCase())}" data-fds="${p.fdsStatus.key}" data-status="${esc(p.status||'Actif')}"><td data-label="Produit"><b>${esc(p.reference||'')}</b><div>${esc(p.name||'—')}</div><div class="small muted">${esc(p.manufacturer||p.supplier||'')}</div></td><td data-label="FDS"><span class="${p.fdsStatus.key==='ok'?'fds-ok':p.fdsStatus.key==='soon'?'fds-soon':p.fdsStatus.key==='late'?'fds-late':'fds-missing'}">${esc(p.fdsStatus.label)}</span><div class="small muted">${esc(p.fdsStatus.date||p.fdsRevisionDate||'')}</div></td><td data-label="Dangers"><div class="hazard-stack">${p.cmr==='Oui'?'<span class="badge red">CMR</span>':''}${p.hStatements?`<span class="badge orange">${esc(p.hStatements).slice(0,34)}</span>`:''}${p.pictograms?`<span class="badge blue">${esc(p.pictograms)}</span>`:''}</div></td><td data-label="Unités">${(p.workUnits||[]).length?esc((p.workUnits||[]).join(', ')):'—'}</td><td data-label="Usage">${esc(p.usage||'—')}</td><td data-label="Statut"><span class="pill ${p.status==='En attente'?'orange':p.status==='Supprimé'?'gray':''}">${esc(p.status||'Actif')}</span></td><td data-label=""><div class="stack"><button class="btn sm" onclick="openChemicalForm('${p.id}')">Modifier</button><button class="btn sm" onclick="openChemicalDetail('${p.id}')">Fiche</button></div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Aucun produit.</td></tr>'}</tbody></table></div></div>`;
+}
+function filterChem(){const q=(document.getElementById('chemSearch')?.value||'').toLowerCase(),f=document.getElementById('chemFds')?.value||'',s=document.getElementById('chemStatus')?.value||'';document.querySelectorAll('#chemTable tbody tr').forEach(tr=>tr.classList.toggle('hidden',!tr.dataset.search.includes(q)||(f&&tr.dataset.fds!==f)||(s&&tr.dataset.status!==s)))}
+function workUnitPicker(selected){
+  const vals=[...(selected||[])];const units=[...new Set(db.workUnits.filter(Boolean))];
+  return `<div class="field span2"><label>Unité(s) de travail concernée(s)</label><div class="unit-grid">${units.length?units.map(u=>`<label><input type="checkbox" name="unit" value="${esc(u)}" ${vals.includes(u)?'checked':''}>${esc(u)}</label>`).join(''):'<div class="small muted">Aucune unité dans le référentiel.</div>'}</div><div class="stack" style="margin-top:7px"><input id="newUnitField" placeholder="Ajouter une unité de travail" style="flex:1"><button type="button" class="btn sm" onclick="addUnitInline()">＋</button></div><div class="help">Un produit peut être affecté à plusieurs unités de travail.</div></div>`;
+}
+function addUnitInline(){const f=document.getElementById('newUnitField'),v=f?.value.trim();if(!v)return;if(!db.workUnits.includes(v))db.workUnits.push(v);saveDB();document.querySelectorAll('#unit-refresh').forEach(x=>x.remove());openChemicalForm();toast('Unité ajoutée au référentiel.')}
+function openChemicalForm(id){
+  const p=id?db.chemicalProducts.find(x=>x.id===id):null;
+  showModal(`<div class="modalhead"><div><h2>${p?'Modifier le produit':'Ajouter un produit chimique'}</h2><div class="small muted">Inventaire / FDS / unités de travail</div></div><button class="x" onclick="closeModal()">×</button></div>
+  <form id="chemicalForm"><div class="formgrid">
+   <div class="field"><label>Référence</label><input name="reference" value="${esc(p?.reference||'CHIM-'+String(db.chemicalProducts.length+1).padStart(3,'0'))}"></div>
+   <div class="field"><label>Nom du produit *</label><input name="name" value="${esc(p?.name||'')}" required></div>
+   <div class="field"><label>Fabricant</label><input name="manufacturer" value="${esc(p?.manufacturer||'')}"></div>
+   <div class="field"><label>Fournisseur</label><input name="supplier" value="${esc(p?.supplier||'')}"></div>
+   ${workUnitPicker(p?.workUnits||[])}
+   <div class="field"><label>Type</label><select name="productType">${['Produit étiqueté CLP','Produit hors CLP','Agent chimique émis'].map(x=>`<option ${x===(p?.productType||'Produit étiqueté CLP')?'selected':''}>${x}</option>`).join('')}</select></div>
+   <div class="field"><label>FDS disponible ?</label><select name="fdsAvailable"><option value="true" ${(p?.fdsAvailable??true)?'selected':''}>Oui</option><option value="false" ${p?.fdsAvailable===false?'selected':''}>Non</option></select></div>
+   <div class="field"><label>Date de révision FDS</label><input type="date" name="fdsRevisionDate" value="${esc(p?.fdsRevisionDate||'')}"></div>
+   <div class="field"><label>Quantité annuelle</label><input name="annualQuantity" value="${esc(p?.annualQuantity||'')}" placeholder="Ex. 120"></div>
+   <div class="field"><label>Unité quantité</label><input name="quantityUnit" value="${esc(p?.quantityUnit||'')}"></div>
+   <div class="field"><label>Usage / tâche</label><input name="usage" value="${esc(p?.usage||'')}"></div>
+   <div class="field"><label>CMR ?</label><select name="cmr"><option ${p?.cmr==='Non'?'selected':''}>Non</option><option ${p?.cmr==='Oui'?'selected':''}>Oui</option></select></div>
+   <div class="field span2"><label>Mentions de danger H</label><input name="hStatements" value="${esc(p?.hStatements||'')}" placeholder="Ex. H225, H319…"></div>
+   <div class="field span2"><label>Pictogrammes / mots d’avertissement</label><input name="pictograms" value="${esc(p?.pictograms||'')}" placeholder="Ex. GHS02 • GHS07 • Danger"></div>
+   <div class="field"><label>Stockage</label><input name="storage" value="${esc(p?.storage||'')}"></div>
+   <div class="field"><label>Statut</label><select name="status">${['Actif','En attente','Supprimé'].map(x=>`<option ${x===(p?.status||'Actif')?'selected':''}>${x}</option>`).join('')}</select></div>
+   <div class="field span2"><label>Mesures existantes / remarques</label><textarea name="notes">${esc(p?.notes||'')}</textarea></div>
+  </div><div class="notice green">La durée et l’alerte FDS sont paramétrables. Le logiciel affiche une échéance à partir de la date de révision enregistrée.</div>
+  <div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button>${p?`<button type="button" class="btn danger" onclick="closeModal();deleteChemical('${p.id}')">Supprimer</button>`:''}<button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('chemicalForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.workUnits=[...e.target.querySelectorAll('input[name=unit]:checked')].map(x=>x.value);d.fdsAvailable=d.fdsAvailable==='true';if(!d.name.trim())return alert('Nom du produit obligatoire');if(p)Object.assign(p,d,{updated:new Date().toISOString()});else db.chemicalProducts.push({id:uid('CHIM'),created:new Date().toISOString(),...d});saveDB();closeModal();render();toast('Produit enregistré.')};
+}
+function deleteChemical(id){db.chemicalProducts=db.chemicalProducts.filter(x=>x.id!==id);saveDB();render();toast('Produit supprimé.')}
+function openChemicalDetail(id){
+  const p=chemicalProducts().find(x=>x.id===id);if(!p)return;
+  showModal(`<div class="modalhead"><div><h2>${esc(p.name)}</h2><div class="small muted">${esc(p.reference||'')}</div></div><button class="x" onclick="closeModal()">×</button></div>
+  <div class="detail-grid"><div class="detail-box"><div class="label">FDS</div><b class="${p.fdsStatus.key==='ok'?'fds-ok':p.fdsStatus.key==='soon'?'fds-soon':p.fdsStatus.key==='late'?'fds-late':'fds-missing'}">${esc(p.fdsStatus.label)}</b></div><div class="detail-box"><div class="label">Échéance FDS</div><b>${esc(p.fdsStatus.date||'—')}</b></div><div class="detail-box"><div class="label">CMR</div><b>${esc(p.cmr||'Non')}</b></div><div class="detail-box"><div class="label">Quantité annuelle</div><b>${esc([p.annualQuantity,p.quantityUnit].filter(Boolean).join(' ')||'—')}</b></div></div>
+  <div class="section-head"><h2>Unités de travail</h2></div><div class="stack">${(p.workUnits||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join('')||'<span class="muted">Non renseignées</span>'}</div>
+  <div class="section-head"><h2>Dangers / utilisation</h2></div><div class="card" style="padding:13px"><b>H :</b> ${esc(p.hStatements||'Non renseigné')}<br><b>Pictogrammes :</b> ${esc(p.pictograms||'Non renseigné')}<br><b>Usage :</b> ${esc(p.usage||'Non renseigné')}<br><b>Stockage :</b> ${esc(p.storage||'Non renseigné')}</div>
+  <div class="form-actions"><button class="btn" onclick="closeModal()">Fermer</button><button class="btn primary" onclick="closeModal();openChemicalForm('${p.id}')">Modifier</button></div>`);
+}
+function chemicalRequestsTab(){
+  return `<div class="card"><div class="pagehead" style="margin-bottom:12px"><div><h2 style="margin:0">Demandes d’acceptation</h2><div class="muted">Traçabilité des demandes liées à l’entrée ou au changement d’un produit.</div></div><button class="btn primary" onclick="openChemicalRequestForm()">＋ Nouvelle demande</button></div><div class="tablewrap m-cards"><table><thead><tr><th>Référence</th><th>Produit</th><th>Demandeur</th><th>Date</th><th>Statut</th><th>Décision / commentaire</th><th></th></tr></thead><tbody>${db.chemicalRequests.length?db.chemicalRequests.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(r=>`<tr><td data-label="Référence"><b>${esc(r.reference||r.id)}</b></td><td data-label="Produit">${esc(r.productName||'')}</td><td data-label="Demandeur">${esc(r.requester||'')}</td><td data-label="Date">${esc(r.date||'')}</td><td data-label="Statut"><span class="pill ${r.status==='Acceptée'?'':'orange'}">${esc(r.status||'À examiner')}</span></td><td data-label="Commentaire">${esc(r.comment||'')}</td><td data-label=""><button class="btn sm" onclick="openChemicalRequestForm('${r.id}')">Modifier</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Aucune demande enregistrée.</td></tr>'}</tbody></table></div></div>`;
+}
+function openChemicalRequestForm(id){
+  const r=id?db.chemicalRequests.find(x=>x.id===id):null;
+  showModal(`<div class="modalhead"><h2>${r?'Modifier la demande':'Nouvelle demande d’acceptation'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="reqForm"><div class="formgrid">
+  <div class="field"><label>Référence</label><input name="reference" value="${esc(r?.reference||'DAC-'+String(db.chemicalRequests.length+1).padStart(3,'0'))}"></div>
+  <div class="field"><label>Produit *</label><input name="productName" value="${esc(r?.productName||'')}" required></div>
+  <div class="field"><label>Demandeur</label><input name="requester" value="${esc(r?.requester||'')}"></div>
+  <div class="field"><label>Date</label><input type="date" name="date" value="${esc(r?.date||now())}"></div>
+  <div class="field"><label>Statut</label><select name="status">${['À examiner','Compléments demandés','Acceptée','Refusée'].map(x=>`<option ${x===(r?.status||'À examiner')?'selected':''}>${x}</option>`).join('')}</select></div>
+  <div class="field"><label>Unité / secteur</label><input name="unit" value="${esc(r?.unit||'')}"></div>
+  <div class="field span2"><label>Commentaire / décision</label><textarea name="comment">${esc(r?.comment||'')}</textarea></div>
+  </div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('reqForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(r)Object.assign(r,d);else db.chemicalRequests.push({id:uid('DAC'),...d});saveDB();closeModal();render();toast('Demande enregistrée.')};
+}
+function chemicalActionsTab(){
+  return `<div class="card"><div class="pagehead" style="margin-bottom:12px"><div><h2 style="margin:0">Actions risque chimique</h2><div class="muted">Suivi des mesures issues de l’évaluation chimique.</div></div><button class="btn primary" onclick="openChemicalActionForm()">＋ Ajouter une action</button></div><div class="tablewrap m-cards"><table><thead><tr><th>Action</th><th>Produit / unité</th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody>${db.chemicalActions.length?db.chemicalActions.map(a=>`<tr><td data-label="Action"><b>${esc(a.title)}</b><div class="small muted">${esc(a.description||'')}</div></td><td data-label="Produit / unité">${esc(a.product||'')}<br>${esc(a.unit||'')}</td><td data-label="Responsable">${esc(a.owner||'')}</td><td data-label="Échéance">${esc(a.due||'')}</td><td data-label="Priorité"><span class="pill ${a.priority==='Critique'?'red':a.priority==='Haute'?'orange':''}">${esc(a.priority||'Normale')}</span></td><td data-label="Statut"><span class="pill">${esc(a.status||'À traiter')}</span></td><td data-label=""><button class="btn sm" onclick="openChemicalActionForm('${a.id}')">Modifier</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Aucune action.</td></tr>'}</tbody></table></div></div>`;
+}
+function openChemicalActionForm(id){
+  const a=id?db.chemicalActions.find(x=>x.id===id):null;
+  showModal(`<div class="modalhead"><h2>${a?'Modifier l’action':'Nouvelle action chimique'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="chemActionForm"><div class="formgrid">
+  <div class="field span2"><label>Action *</label><input name="title" value="${esc(a?.title||'')}" required></div>
+  <div class="field"><label>Produit</label><input name="product" value="${esc(a?.product||'')}"></div>
+  <div class="field"><label>Unité de travail</label><input name="unit" value="${esc(a?.unit||'')}"></div>
+  <div class="field"><label>Responsable</label><input name="owner" value="${esc(a?.owner||'')}"></div>
+  <div class="field"><label>Échéance</label><input type="date" name="due" value="${esc(a?.due||'')}"></div>
+  <div class="field"><label>Priorité</label><select name="priority">${['Basse','Normale','Haute','Critique'].map(x=>`<option ${x===(a?.priority||'Normale')?'selected':''}>${x}</option>`).join('')}</select></div>
+  <div class="field"><label>Statut</label><select name="status">${['À traiter','En cours','Clôturée','Annulée'].map(x=>`<option ${x===(a?.status||'À traiter')?'selected':''}>${x}</option>`).join('')}</select></div>
+  <div class="field span2"><label>Description / mesure de prévention</label><textarea name="description">${esc(a?.description||'')}</textarea></div>
+  </div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button>${a?`<button type="button" class="btn danger" onclick="closeModal();db.chemicalActions=db.chemicalActions.filter(x=>x.id!=='${a.id}');saveDB();render();toast('Action supprimée.')">Supprimer</button>`:''}<button class="btn primary">Enregistrer</button></div></form>`);
+  document.getElementById('chemActionForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(a)Object.assign(a,d);else db.chemicalActions.push({id:uid('CA'),created:new Date().toISOString(),...d});saveDB();closeModal();render();toast('Action enregistrée.')};
+}
+function chemicalSettingsTab(){
+  return `<div class="card settings-card"><h2>Paramètres FDS</h2><div class="switch-row"><div><b>Durée de validité calculée</b><div class="help">Nombre d’années utilisé pour calculer l’échéance affichée à partir de la date de révision.</div></div><input id="fdsAge" type="number" min="1" max="20" value="${esc(db.chemicalSettings.fdsAgeYears||5)}" style="width:120px"></div>
+  <div class="switch-row"><div><b>Alerte avant échéance</b><div class="help">Nombre de mois avant l’échéance pour afficher « Échéance proche ».</div></div><input id="fdsAlert" type="number" min="1" max="24" value="${esc(db.chemicalSettings.alertMonths||6)}" style="width:120px"></div>
+  <div style="margin-top:14px"><button class="btn primary" onclick="saveChemicalSettings()">Enregistrer les paramètres</button></div></div>`;
+}
+function saveChemicalSettings(){db.chemicalSettings.fdsAgeYears=Math.max(1,Math.min(20,Number(document.getElementById('fdsAge').value)||5));db.chemicalSettings.alertMonths=Math.max(1,Math.min(24,Number(document.getElementById('fdsAlert').value)||6));saveDB();render();toast('Paramètres FDS enregistrés.')}
+
+function exportChemicalCSV(){
+  const rows=[['Référence','Produit','Fabricant','Fournisseur','Unités de travail','FDS','Révision FDS','Échéance FDS','Usage','Quantité annuelle','Unité','CMR','H','Pictogrammes','Stockage','Statut'],...chemicalProducts().map(p=>[p.reference,p.name,p.manufacturer,p.supplier,(p.workUnits||[]).join(' | '),p.fdsAvailable?'Oui':'Non',p.fdsRevisionDate,p.fdsStatus.date,p.usage,p.annualQuantity,p.quantityUnit,p.cmr,p.hStatements,p.pictograms,p.storage,p.status])];
+  download('inventaire_risque_chimique.csv',rows.map(r=>r.map(csvCell).join(';')).join('\\n'),'text/csv;charset=utf-8');
+}
+
+function settingsPage(el){
+  const cfg=aiSettingsSafe();
+  el.innerHTML=`<div class="pagehead"><div><h1>Paramètres & données</h1><div class="muted">Sauvegarde, restauration, IA et référentiels.</div></div></div>
+  <div class="grid two">
+   <div class="card"><h2>Sauvegarde</h2><div class="help">Toutes les données sont stockées dans le navigateur. Fais régulièrement un export JSON avant toute modification importante.</div><div class="form-actions" style="justify-content:flex-start"><button class="btn primary" onclick="exportJSON()">⇩ Exporter toutes les données</button><button class="btn" onclick="importJSON()">⇧ Importer JSON</button></div></div>
+   <div class="card"><h2>IA — lecture intelligente des rapports VGP</h2>
+    <div class="help">L’IA est maintenant le moteur principal de lecture. Elle analyse les pages du PDF, comprend sa structure puis recherche les observations, même lorsque le rapport n’est pas construit comme un Q18.</div>
+    <div class="field" style="margin-top:12px"><label class="checkbox-label"><input id="aiEnabled" type="checkbox" ${cfg.enabled?'checked':''} onchange="toggleAiExternal(this.checked)"> Activer l’analyse IA</label></div>
+    <div class="field"><label for="aiProvider">Moteur</label><select id="aiProvider" onchange="aiProviderChanged(this.value)"><option value="gemini" ${cfg.provider==='gemini'?'selected':''}>Google Gemini (recommandé)</option><option value="ollama" ${cfg.provider==='ollama'?'selected':''}>Ollama local</option><option value="openai-compatible" ${cfg.provider==='openai-compatible'?'selected':''}>API compatible OpenAI / Chat</option><option value="responses" ${cfg.provider==='responses'?'selected':''}>OpenAI Responses / passerelle compatible</option></select></div>
+    <div class="field"><label for="aiEndpoint">Endpoint IA</label><input id="aiEndpoint" value="${esc(cfg.endpoint)}" placeholder="http://127.0.0.1:11434/api/chat"></div>
+    <div class="field"><label for="aiModel">Modèle</label><input id="aiModel" value="${esc(cfg.model)}" placeholder="Nom exact du modèle installé / fourni par le serveur"></div>
+    <div class="field"><label for="aiApiKey">Clé API <span class="muted">(facultative, jamais exportée)</span></label><input id="aiApiKey" type="password" value="${esc(cfg.apiKey||'')}" placeholder="Gardée sur cet appareil (jamais exportée)"></div>
+    <div class="formgrid"><div class="field"><label>Pages par bloc IA</label><select id="aiChunkPages"><option value="4" ${cfg.chunkPages===4?'selected':''}>4</option><option value="5" ${cfg.chunkPages===5?'selected':''}>5</option><option value="6" ${cfg.chunkPages===6?'selected':''}>6</option><option value="8" ${cfg.chunkPages===8?'selected':''}>8</option></select></div><div class="field"><label>Délai maximum / appel</label><select id="aiTimeout"><option value="60000" ${cfg.timeout===60000?'selected':''}>60 s</option><option value="90000" ${cfg.timeout===90000?'selected':''}>90 s</option><option value="120000" ${cfg.timeout===120000?'selected':''}>120 s</option></select></div></div>
+    <div class="form-actions" style="justify-content:flex-start"><button class="btn primary" onclick="saveAiSettings()">Enregistrer l’IA</button><button class="btn" onclick="testAiV2()">Tester la connexion IA</button></div>
+    <div id="aiDiagnostic" class="ai-diag">${cfg.enabled?'IA activée. Lance le test pour vérifier réellement la connexion.':'IA désactivée.'}</div>
+    <div class="help" style="margin-top:8px">Pour Gemini : colle ta clé (aistudio.google.com/apikey), elle reste sur cet appareil (jamais exportée). Pour Ollama : modèle installé localement + serveur Ollama démarré. Depuis un fichier HTML ouvert directement, l’autorisation navigateur/CORS du serveur local est nécessaire. Pour une application commercialisée, une passerelle serveur est préférable afin de ne jamais exposer une clé API dans le HTML.</div>
+   </div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+   <div class="card"><h2>Référentiel unités de travail</h2><div class="toolbar"><input id="unitNew" placeholder="Nouvelle unité"><button class="btn" onclick="addUnit()">Ajouter</button></div><div class="stack">${db.workUnits.map(u=>`<span class="chip">${esc(u)} <button style="border:0;background:transparent;padding:0" onclick="removeUnit('${esc(u)}')">×</button></span>`).join('')||'<span class="muted">Aucune unité.</span>'}</div></div>
+   <div class="card"><h2>Référentiel responsables</h2><div class="toolbar"><input id="personNew" placeholder="Nom / service"><button class="btn" onclick="addPerson()">Ajouter</button></div><div class="stack">${db.personnel.map(p=>`<span class="chip">${esc(p)} <button style="border:0;background:transparent;padding:0" onclick="removePerson('${esc(p)}')">×</button></span>`).join('')||'<span class="muted">Aucun responsable.</span>'}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h2>Réinitialisation</h2><div class="notice red">Cette action efface uniquement les données locales de cette application.</div><button class="btn danger" onclick="resetAll()">Effacer les données locales</button></div>`;
+}
+function aiProviderChanged(p){const ep=document.getElementById('aiEndpoint'),md=document.getElementById('aiModel');if(p==='gemini'){ep.value='https://generativelanguage.googleapis.com/v1beta';md.value='gemini-3.7-flash'}else if(p==='ollama'){ep.value='http://127.0.0.1:11434/api/chat';md.value='llama3.2'}}
+window.aiProviderChanged=aiProviderChanged;
+function toggleAiExternal(enabled){aiSettings={...aiSettings,enabled:Boolean(enabled)};db.aiSettings={enabled:aiSettings.enabled,provider:aiSettings.provider,endpoint:aiSettings.endpoint,model:aiSettings.model,timeout:aiSettings.timeout,chunkPages:aiSettings.chunkPages,visionFallback:aiSettings.visionFallback};saveDB();const el=document.getElementById('aiDiagnostic');if(el)el.textContent=aiSettings.enabled?'IA activée.':'IA désactivée.';toast(aiSettings.enabled?'IA activée.':'IA désactivée.');}
+function saveAiSettings(preserveKey=true){
+  try{
+    const enabled=!!document.getElementById('aiEnabled')?.checked;const provider=String(document.getElementById('aiProvider')?.value||aiSettings.provider||'ollama');const endpoint=String(document.getElementById('aiEndpoint')?.value||'').trim();const model=String(document.getElementById('aiModel')?.value||'').trim();const apiKey=String(document.getElementById('aiApiKey')?.value||'').trim();const chunkPages=Number(document.getElementById('aiChunkPages')?.value||5);const timeout=Number(document.getElementById('aiTimeout')?.value||90000);
+    aiSettings={...aiSettings,enabled,provider,endpoint,model,chunkPages,timeout,apiKey};db.aiSettings={enabled,provider,endpoint,model,timeout,chunkPages,visionFallback:Boolean(aiSettings.visionFallback)};saveDB();const storedKey=localStorage.getItem('sgeAiSessionKey')||''; const keyToKeep=apiKey||storedKey; localStorage.setItem('sgeAiSessionKey',keyToKeep); aiSettings.apiKey=keyToKeep;showAiDiagnostic('ok','Configuration IA enregistrée dans l’application. La clé API reste sur cet appareil.');toast('Configuration IA enregistrée.');
+  }catch(e){console.error(e);showAiDiagnostic('err','Impossible d’enregistrer la configuration IA.')}
+}
+function loadAiSettings(){try{const src=db?.aiSettings||JSON.parse(localStorage.getItem('sgeAiSettings')||'null')||{};if(src&&/^gemini-(?:1\.|2\.)/.test(String(src.model||'')))src.model='gemini-3.8-flash';aiSettings={...aiDefaultSettings(),...src,apiKey:localStorage.getItem('sgeAiSessionKey')||src.apiKey||''}}catch(e){console.warn('Chargement configuration IA impossible',e);aiSettings=aiDefaultSettings()}}
+async function testAi(){return testAiV2()}
+
+function addUnit(){const v=document.getElementById('unitNew').value.trim();if(v&&!db.workUnits.includes(v)){db.workUnits.push(v);saveDB();render()}}
+function removeUnit(v){db.workUnits=db.workUnits.filter(x=>x!==v);saveDB();render()}
+function addPerson(){const v=document.getElementById('personNew').value.trim();if(v&&!db.personnel.includes(v)){db.personnel.push(v);saveDB();render()}}
+function removePerson(v){db.personnel=db.personnel.filter(x=>x!==v);saveDB();render()}
+function resetAll(){if(!confirm('Effacer toutes les données locales ?'))return;localStorage.removeItem('sgeHseVgpChemicalDB');db=loadDB();render();toast('Données effacées.')}
+
+function exportJSON(){download('sge_hse_vgp_chimique_backup.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),db},null,2),'application/json;charset=utf-8')}
+function importJSON(){
+  const i=document.createElement('input');i.type='file';i.accept='application/json,.json';i.onchange=async()=>{const f=i.files?.[0];if(!f)return;try{const x=JSON.parse(await f.text());const src=x.db||x;db={...db,...src};saveDB();render();toast('Sauvegarde importée.')}catch(e){alert('Fichier JSON invalide : '+e.message)}};i.click();
+}
+
+function showModal(inner){document.getElementById('modalRoot').innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`}
+function closeModal(){document.getElementById('modalRoot').innerHTML=''}
+
+function migrateV7StoredData(){for(const f of(db.vgpFindings||[])){Object.assign(f,normalizeFindingForApp(f));if(f.reportObservationNo)f.title=observationLabel(f.reportObservationNo,f.observationKind)}for(const r of(db.vgpReports||[]))if(r.ai?.candidates)r.ai.candidates=r.ai.candidates.map(normalizeFindingForApp);saveDB()}
+loadAiSettings(); migrateV7StoredData(); nav();render();
+
+window.go=go;window.toggleMenu=toggleMenu;window.render=render;window.quickNew=quickNew;window.backVgpHome=backVgpHome;window.openVgpType=openVgpType;window.openVgpPlan=openVgpPlan;window.openGlobalPlan=openGlobalPlan;window.openReport=openReport;window.openReportForm=openReportForm;window.deleteReport=deleteReport;window.openFindingForm=openFindingForm;window.deleteFinding=deleteFinding;window.openEquipmentForm=openEquipmentForm;window.deleteEquipment=deleteEquipment;window.openVgpTypeForm=openVgpTypeForm;window.deleteVgpType=deleteVgpType;window.exportVgpPlan=exportVgpPlan;window.handlePdfInput=handlePdfInput;window.startAiAnalysis=startAiAnalysis;window.acceptAiCandidate=acceptAiCandidate;window.editAiCandidate=editAiCandidate;window.closeModal=closeModal;window.filterPlan=filterPlan;
+window.quickImportPdf=quickImportPdf;window.runCompleteAi=runCompleteAi;window.reviewWithAi=reviewWithAi;window.acceptAllAiCandidates=acceptAllAiCandidates;window.openChemicalForm=openChemicalForm;window.openChemicalDetail=openChemicalDetail;window.openChemicalRequestForm=openChemicalRequestForm;window.openChemicalActionForm=openChemicalActionForm;window.filterChem=filterChem;window.saveChemicalSettings=saveChemicalSettings;window.exportChemicalCSV=exportChemicalCSV;window.saveAiSettings=saveAiSettings;window.toggleAiExternal=toggleAiExternal;window.testAi=testAi;window.testAiV2=testAiV2;window.showAiDiagnostic=showAiDiagnostic;window.analyzeWithAiEngine=analyzeWithAiEngine;window.addUnit=addUnit;window.removeUnit=removeUnit;window.addPerson=addPerson;window.removePerson=removePerson;window.resetAll=resetAll;window.exportJSON=exportJSON;window.importJSON=importJSON;window.addUnitInline=addUnitInline;
+</script>
+</body>
+</html>
