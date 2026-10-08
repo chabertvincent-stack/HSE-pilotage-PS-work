@@ -171,7 +171,7 @@ function loadDB(){
     return {
       vgpTypes:types.map(t=>({...t,periodicityMonths:Number(t.periodicityMonths)||12,alertDays:Number(t.alertDays)||30})),
       vgpEquipment:Array.isArray(x.vgpEquipment)?x.vgpEquipment:[],
-      vgpReports:Array.isArray(x.vgpReports)?x.vgpReports:[],
+      vgpReports:Array.isArray(x.vgpReports)?x.vgpReports.map(r=>({...r,reportDate:r.reportDate||r.inspection||''})):[],
       vgpFindings:Array.isArray(x.vgpFindings)?x.vgpFindings:[],
       chemicalProducts:Array.isArray(x.chemicalProducts)?x.chemicalProducts:[],
       chemicalRequests:Array.isArray(x.chemicalRequests)?x.chemicalRequests:[],
@@ -219,6 +219,7 @@ function dueState(date,alertDays=30){
   return {key:'ok',label:'À jour',className:'ok'}
 }
 function reportNext(t,inspection){return inspection?addMonths(inspection,t.periodicityMonths):''}
+function reportReference(vgpKey, reportDate, excludeId=''){const t=vgpType(vgpKey);if(!t)return '';const d=String(reportDate||'');const year=(d.match(/^(\d{4})/)||[])[1]||String(new Date().getFullYear());const code=String(t.code||t.key||'VGP').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'vgp';const count=db.vgpReports.filter(r=>String(r.id)!==String(excludeId)&&String(r.vgpKey||r.reportType)===String(t.key)&&String(r.reportDate||r.inspection||'').startsWith(year)).length+1;return `${year}-${code}-${String(count).padStart(2,'0')}`}
 function reportYear(r){return String(r.inspection||r.created||now()).slice(0,4)}
 function vgpStats(){
   const f=db.vgpFindings;
@@ -306,9 +307,9 @@ function vgpTypePage(el,key){
     return `<tr><td data-label="Équipement"><b>${esc(e.name)}</b></td><td data-label="Localisation">${esc(e.location||'—')}</td><td data-label="Identifiant">${esc(e.identifier||'—')}</td><td data-label="Dernière VGP">${esc(e.lastInspection||'—')}</td><td data-label="Prochaine" class="${ds.className}">${esc(e.nextDue||'—')}</td><td data-label="État"><span class="pill ${ds.key==='late'?'red':ds.key==='soon'?'orange':''}">${esc(ds.label)}</span></td><td data-label=""><div class="stack"><button class="btn sm" onclick="openEquipmentForm('${e.id}','${esc(key)}')">Modifier</button><button class="btn sm danger" onclick="deleteEquipment('${e.id}')">Suppr.</button></div></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">Aucun équipement enregistré.</td></tr>'}</tbody></table></div>
   <div class="section-head"><h2>Rapports</h2></div>
-  <div class="tablewrap m-cards"><table><thead><tr><th>Date</th><th>Rapport</th><th>Équipement(s)</th><th>NC</th><th>Progression</th><th>Échéance</th><th></th></tr></thead><tbody>${rs.length?rs.map(r=>{
+  <div class="tablewrap m-cards"><table><thead><tr><th>Date</th><th>Rapport</th><th>NC</th><th>Progression</th><th>Échéance</th><th></th></tr></thead><tbody>${rs.length?rs.map(r=>{
     const ff=findingsForReport(r.id),openN=ff.filter(x=>findingStatus(x)!=='Clôturée'&&findingStatus(x)!=='Annulée').length,p=vgpCompletion(r.id),ds=dueState(r.next,t.alertDays);
-    return `<tr onclick="openReport('${r.id}')" style="cursor:pointer"><td data-label="Date">${esc(r.inspection||'—')}</td><td data-label="Rapport"><b>${esc(r.reportNumber||'Rapport')}</b><div class="small muted">${esc(r.organism||'')}</div></td><td data-label="Équipement">${esc(r.equipment||'—')}</td><td data-label="NC"><span class="pill ${openN?'red':''}">${ff.length} / ${openN} ouverte(s)</span></td><td data-label="Progression">${p}%<div class="progress" style="margin-top:4px"><span style="width:${p}%"></span></div></td><td data-label="Échéance" class="${ds.className}">${esc(r.next||'—')}</td><td data-label=""><button class="btn sm" onclick="event.stopPropagation();openReport('${r.id}')">Ouvrir</button></td></tr>`;
+    return `<tr onclick="openReport('${r.id}')" style="cursor:pointer"><td data-label="Date">${esc(r.inspection||'—')}</td><td data-label="Rapport"><b>${esc(r.reportNumber||'Rapport')}</b><div class="small muted">${esc(r.organism||'')}</div></td><td data-label="NC"><span class="pill ${openN?'red':''}">${ff.length} / ${openN} ouverte(s)</span></td><td data-label="Progression">${p}%<div class="progress" style="margin-top:4px"><span style="width:${p}%"></span></div></td><td data-label="Échéance" class="${ds.className}">${esc(r.next||'—')}</td><td data-label=""><button class="btn sm" onclick="event.stopPropagation();openReport('${r.id}')">Ouvrir</button></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">Aucun rapport enregistré.</td></tr>'}</tbody></table></div>`;
 }
 
@@ -539,7 +540,8 @@ async function quickImportPdf(ev){
   if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){toast('Choisis un fichier PDF.');return}
   const base=f.name.replace(/\.pdf$/i,'');const low=base.toLowerCase();
   const t=db.vgpTypes.find(x=>low.includes(String(x.code||'').toLowerCase())||low.includes(String(x.key||'').toLowerCase()))||db.vgpTypes[0];
-  const r={id:uid('VGP'),created:new Date().toISOString(),vgpKey:t?.key,reportNumber:base,equipment:base,location:'À compléter',organism:'',inspection:now(),next:t?reportNext(t,now()):'',status:'À traiter',notes:'Créé par import PDF',ai:null};
+  const reportDate=now();
+  const r={id:uid('VGP'),created:new Date().toISOString(),vgpKey:t?.key,reportDate,reportNumber:reportReference(t?.key,reportDate,''),equipment:'',location:'',organism:'',inspection:reportDate,next:t?reportNext(t,reportDate):'',status:'À traiter',notes:'Créé par import PDF',ai:null};
   db.vgpReports.push(r);saveDB();openReport(r.id);
   await importPdfToReport(f,r.id);
 }
@@ -949,26 +951,25 @@ function editAiCandidate(reportId,index){const r=db.vgpReports.find(x=>String(x.
 function openReportForm(id,typeKey){
   const existing=id?db.vgpReports.find(x=>x.id===id):null;
   const t=typeKey?vgpType(typeKey):existing?vgpType(existing.vgpKey||existing.reportType):vgpType(db.vgpTypes[0]?.key);
-  const insp=existing?.inspection||now();
-  const eq=equipmentForType(t.key);
+  const reportDate=existing?.reportDate||existing?.inspection||now();
   showModal(`<div class="modalhead"><div><h2>${existing?'Modifier le rapport':'Nouveau rapport VGP'}</h2><div class="small muted">${esc(t.name)} • périodicité ${t.periodicityMonths} mois</div></div><button class="x" onclick="closeModal()">×</button></div>
   <form id="reportForm"><div class="formgrid">
-    <div class="field"><label>Type</label><select name="vgpKey" id="reportVgpType">${allTypes().map(x=>`<option value="${esc(x.key)}" ${x.key===t.key?'selected':''}>${esc(x.code)} — ${esc(x.name)}</option>`).join('')}</select></div>
-    <div class="field"><label>Référence du rapport *</label><input name="reportNumber" value="${esc(existing?.reportNumber||'')}" placeholder="Ex. 2026-Q18-01" required></div>
-    <div class="field"><label>Équipement / identifiant *</label><input name="equipment" value="${esc(existing?.equipment||'')}" placeholder="Ex. Armoire TGBT / Pont N°…" required></div>
-    <div class="field"><label>Localisation / secteur *</label><input name="location" value="${esc(existing?.location||'')}" placeholder="Bâtiment, atelier, zone…" required></div>
+    <div class="field"><label>Type de VGP</label><select name="vgpKey" id="reportVgpType">${allTypes().map(x=>`<option value="${esc(x.key)}" ${x.key===t.key?'selected':''}>${esc(x.code)} — ${esc(x.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Date du rapport *</label><input type="date" name="reportDate" id="reportDate" value="${esc(reportDate)}" required></div>
+    <div class="field"><label>Référence automatique</label><input name="reportNumber" id="reportNumber" value="${esc(existing?.reportNumber||reportReference(t.key,reportDate,existing?.id))}" readonly></div>
+    <div class="field"><label>Localisation / secteur</label><input name="location" value="${esc(existing?.location||'')}" placeholder="Bâtiment, atelier, zone…"></div>
     <div class="field"><label>Organisme de vérification</label><input name="organism" value="${esc(existing?.organism||'')}" placeholder="Apave, Bureau Veritas, Socotec…"></div>
-    <div class="field"><label>Date de vérification *</label><input type="date" name="inspection" value="${esc(insp)}" required></div>
-    <div class="field"><label>Prochaine échéance</label><input type="date" name="next" value="${esc(existing?.next||reportNext(t,insp))}"></div>
+    <div class="field"><label>Date de vérification</label><input type="date" name="inspection" value="${esc(existing?.inspection||reportDate)}"></div>
+    <div class="field"><label>Prochaine échéance</label><input type="date" name="next" value="${esc(existing?.next||reportNext(t,existing?.inspection||reportDate))}"></div>
     <div class="field"><label>Statut global</label><select name="status">${['À traiter','En cours','Conforme','Clôturé'].map(x=>`<option ${x===(existing?.status||'À traiter')?'selected':''}>${x}</option>`).join('')}</select></div>
     <div class="field span2"><label>Commentaire</label><textarea name="notes" placeholder="Observations générales, références internes…">${esc(existing?.notes||'')}</textarea></div>
-  </div><div class="notice green">Tu pourras ensuite déposer le PDF du rapport dans la fiche et lancer l’analyse IA. Les non-conformités proposées seront séparées de celles déjà validées.</div>
+  </div><div class="notice green">La référence est générée automatiquement : <b>AAAA-CODE-01</b>. Le compteur est séparé par type de VGP et par année.</div>
   <div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer</button></div></form>`);
-  document.getElementById('reportForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const nt=vgpType(d.vgpKey);if(!d.next)d.next=reportNext(nt,d.inspection);
-    if(existing){Object.assign(existing,d,{updated:new Date().toISOString()});saveDB();closeModal();openReport(existing.id);toast('Rapport mis à jour.')}
-    else{const r={id:uid('VGP'),created:new Date().toISOString(),...d,ai:null};db.vgpReports.push(r);saveDB();closeModal();openReport(r.id);toast('Rapport créé.')}
-  }
+  const refreshRef=()=>{if(existing)return;const type=document.getElementById('reportVgpType')?.value,date=document.getElementById('reportDate')?.value,inp=document.getElementById('reportNumber');if(inp)inp.value=reportReference(type,date,'')};
+  document.getElementById('reportVgpType').addEventListener('change',refreshRef);document.getElementById('reportDate').addEventListener('change',refreshRef);
+  document.getElementById('reportForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const nt=vgpType(d.vgpKey);d.reportDate=d.reportDate||d.inspection||now();d.inspection=d.inspection||d.reportDate;if(!d.next)d.next=reportNext(nt,d.inspection);if(existing){Object.assign(existing,d,{updated:new Date().toISOString()});saveDB();closeModal();openReport(existing.id);toast('Rapport mis à jour.')}else{d.reportNumber=reportReference(d.vgpKey,d.reportDate,'');const r={id:uid('VGP'),created:new Date().toISOString(),...d,equipment:'',ai:null};db.vgpReports.push(r);saveDB();closeModal();openReport(r.id);toast(`Rapport ${r.reportNumber} créé.`)}}
 }
+
 function deleteReport(id){const r=db.vgpReports.find(x=>x.id===id);if(!r)return;if(!confirm('Supprimer ce rapport et son plan d’action ?'))return;db.vgpFindings=db.vgpFindings.filter(x=>x.reportId!==id);db.vgpReports=db.vgpReports.filter(x=>x.id!==id);saveDB();openVgpType(r.vgpKey||r.reportType);toast('Rapport supprimé.')}
 function openFindingForm(id,reportId){const existing=id?db.vgpFindings.find(x=>x.id===id):null;if(existing){Object.assign(existing,normalizeFindingForApp(existing));if(existing.reportObservationNo)existing.title=observationLabel(existing.reportObservationNo,existing.observationKind);saveDB();}const r=reportId?db.vgpReports.find(x=>x.id===reportId):existing?db.vgpReports.find(x=>x.id===existing.reportId):null;const label=existing?.reportObservationNo?observationLabel(existing.reportObservationNo,existing.observationKind):'';showModal(`<div class="modalhead"><h2>${existing?'Modifier la non-conformité':'Ajouter une non-conformité'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="findingForm"><div class="formgrid">${r?`<div class="field"><label>Rapport</label><input value="${esc(r.reportNumber||r.id)}" readonly></div>`:''}${existing?.reportObservationNo?`<div class="field"><label>Observation</label><input value="${esc(label)}" readonly></div>`:''}<div class="field span2"><label>Intitulé</label><input name="title" value="${esc(existing?.title||'')}" maxlength="100" ${existing?.reportObservationNo?'readonly':''}></div><div class="field span2"><label>Lieu</label><input name="location" value="${esc(existing?.location||'')}" maxlength="180" placeholder="Bâtiment / atelier / zone"></div><div class="field span2"><label>Équipement / sous-lieu</label><input name="equipment" value="${esc(existing?.equipment||'')}" maxlength="140"></div><div class="field span2"><label>Constat / non-conformité</label><textarea name="description" maxlength="280">${esc(existing?.description||'')}</textarea></div><div class="field span2"><label>Action à réaliser</label><textarea name="action" maxlength="260">${esc(existing?.action||'')}</textarea></div><div class="field"><label>Responsable</label><input name="owner" value="${esc(existing?.owner||'')}" placeholder="Nom / service / entreprise"></div><div class="field"><label>Échéance</label><input type="date" name="due" value="${esc(existing?.due||'')}"></div><div class="field"><label>Priorité</label><select name="priority">${['Basse','Normale','Haute','Critique'].map(x=>`<option ${x===(existing?.priority||'Normale')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Statut</label><select name="status">${['À traiter','En cours','Clôturée','Annulée'].map(x=>`<option ${x===(existing?.status||'À traiter')?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Page du rapport</label><input name="sourcePage" value="${esc(existing?.sourcePage||'')}" readonly></div><div class="field"><label>Origine</label><input value="${esc(existing?.origin==='ai'?'IA':existing?.origin==='structured'?'Extraction structurée':'Saisie manuelle')}" readonly></div><div class="field span2"><label>Extrait justificatif du rapport</label><textarea name="sourceQuote">${esc(existing?.sourceQuote||'')}</textarea></div></div><div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button>${existing?`<button type="button" class="btn danger" onclick="closeModal();deleteFinding('${existing.id}')">Supprimer</button>`:''}<button class="btn primary">Enregistrer</button></div></form>`);document.getElementById('findingForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.title=String(d.title||'').slice(0,100);d.description=cleanHumanText(d.description).slice(0,280);d.action=cleanActionText(d.action).slice(0,260);d.location=cleanLocationText(d.location).slice(0,180);d.equipment=cleanHumanText(d.equipment).slice(0,140);if(existing){Object.assign(existing,d,{updated:new Date().toISOString()});saveDB();closeModal();if(r)openReport(r.id);else render();toast('Non-conformité mise à jour.')}else{const f={id:uid('VGP-NC'),reportId:r?.id||'',created:new Date().toISOString(),origin:'manual',reportObservationNo:'',observationKind:'',...d};db.vgpFindings.push(f);saveDB();closeModal();if(r)openReport(r.id);else render();toast('Non-conformité ajoutée.')}}}
 function deleteFinding(id){db.vgpFindings=db.vgpFindings.filter(x=>x.id!==id);saveDB();render();toast('Non-conformité supprimée.')}
@@ -1003,7 +1004,7 @@ function openVgpTypeForm(typeKey){
 function deleteVgpType(key){if(reportsForType(key).length||equipmentForType(key).length){alert('Cette famille possède encore des équipements ou rapports.');return}db.vgpTypes=db.vgpTypes.filter(x=>x.key!==key);saveDB();backVgpHome();}
 
 function exportVgpPlan(){
-  const rows=[['Réf NC','Rapport','Date','Équipement','Localisation','Constat','Action','Responsable','Échéance','Priorité','Statut','Page','Origine'],...db.vgpFindings.map(f=>{const r=db.vgpReports.find(x=>x.id===f.reportId);return [f.id,r?.reportNumber||'',r?.inspection||'',r?.equipment||'',r?.location||'',f.description||f.title||'',f.action||'',f.owner||'',f.due||'',f.priority||'Normale',findingStatus(f),f.sourcePage||'',f.origin==='ai'?'IA':'Saisie']})];
+  const rows=[['Réf NC','Rapport','Date','Localisation','Constat','Action','Responsable','Échéance','Priorité','Statut','Page','Origine'],...db.vgpFindings.map(f=>{const r=db.vgpReports.find(x=>x.id===f.reportId);return [f.id,r?.reportNumber||'',r?.inspection||'',r?.location||'',f.description||f.title||'',f.action||'',f.owner||'',f.due||'',f.priority||'Normale',findingStatus(f),f.sourcePage||'',f.origin==='ai'?'IA':'Saisie']})];
   download('plan_action_vgp.csv',rows.map(r=>r.map(csvCell).join(';')).join('\\n'),'text/csv;charset=utf-8');
 }
 function csvCell(x){const s=String(x??'');return `"${s.replace(/"/g,'""')}"`}
