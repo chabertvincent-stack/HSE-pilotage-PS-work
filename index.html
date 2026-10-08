@@ -410,75 +410,117 @@ async function analyzePdfDirect(id){
     const buf=new Uint8Array(await file.arrayBuffer());let bin='';
     for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
     const pdf64=btoa(bin);
-    const prompt=`Analyse ce rapport de vérification PDF EN ENTIER comme un expert HSE. Le but est de créer un plan d'action, PAS de faire une extraction de mots-clés.
+    const prompt=`Tu dois analyser ce PDF comme le ferait un expert humain qui reçoit pour la première fois un rapport d'organisme de contrôle.
 
-MISSION : identifier uniquement les NON-CONFORMITÉS / OBSERVATIONS / ANOMALIES / RÉSERVES réellement signalées par l'organisme de contrôle et pour lesquelles une action corrective, une préconisation ou une levée est attendue.
+OBJECTIF UNIQUE : construire la liste des NON-CONFORMITÉS / OBSERVATIONS / ANOMALIES / RÉSERVES / ÉCARTS réellement signalés et des ACTIONS À RÉALISER correspondantes.
+
+IMPORTANT : ne suppose aucune famille de rapport et n'utilise aucune règle propre à Q18, Q19, ATEX, portes, chariots ou levage. Le document peut appartenir à n'importe quelle famille, utiliser n'importe quel vocabulaire, avoir des tableaux, fiches, annexes, photos ou une structure inhabituelle. Tu dois d'abord COMPRENDRE SA STRUCTURE.
 
 MÉTHODE OBLIGATOIRE :
-1. Identifie d'abord la famille et la structure du rapport : Q18, Q19, ATEX/DRPE, portes/portails, chariot, appareil de levage, machine, etc.
-2. Trouve la SECTION DE RÉFÉRENCE qui fait foi pour compter les anomalies : liste récapitulative, fiches d'anomalie, observations, non-conformités, réserves, anomalies, écarts, défauts, préconisations, synthèse ou équivalent.
-3. Si le rapport annonce un nombre officiel d'anomalies/observations, utilise ce nombre comme contrôle de complétude.
-4. Ne compte JAMAIS comme NC un équipement simplement contrôlé, une ligne de tableau, une mesure, une photo, une valeur conforme, une mention RAS, une recommandation générale sans écart identifié, une répétition de la même anomalie, une page de garde, un sommaire ou une légende.
-5. Pour Q19, chaque « Fiche d'anomalie » correspond à UNE anomalie. Les équipements et mesures du tableau de synthèse ne sont pas des NC supplémentaires.
-6. Pour Q18, la « Liste récapitulative des observations » est la liste maîtresse si elle existe. Pour les autres familles, utilise la liste ou les fiches équivalentes réellement présentes.
-7. Une anomalie décrite sur plusieurs pages/fiches doit rester UNE seule observation.
-8. Si une anomalie est répétée ou déjà connue, conserve une seule ligne et indique Nouvelle observation / Ancienne observation / Récurrente seulement si le rapport permet réellement de le déterminer.
-9. N'invente aucune donnée.
-10. location = localisation uniquement. equipment = équipement ou repère uniquement. finding = constat court. action = action corrective ou préconisation. Les références réglementaires vont dans evidence, jamais dans finding/action.
-11. Conserve la page où l'observation est réellement identifiable.
-12. Dernier contrôle : le nombre de findings doit correspondre aux anomalies DISTINCTES réellement présentes dans le rapport, pas au nombre de mots-clés trouvés.
+1. Parcours le PDF entier, y compris les tableaux et fiches détaillées.
+2. Identifie le type de contrôle et surtout la manière dont CET ORGANISME définit une observation/anomalie/non-conformité/réserve/écart.
+3. Repère la ou les zones du rapport qui font foi pour les écarts : liste récapitulative, tableau des anomalies, fiches, réserves, écarts, constats, actions correctives, préconisations, synthèse, relevé d'anomalies ou toute autre structure équivalente. Le nom exact n'est pas imposé.
+4. Détermine le modèle d'un ENREGISTREMENT d'anomalie dans ce rapport : ce qui constitue une ligne/fiche/observation distincte, et comment son lieu, équipement, constat et action sont reliés.
+5. Si le rapport donne explicitement un nombre d'anomalies/observations/écarts, conserve-le comme contrôle de complétude. Ne l'invente pas : s'il n'est pas explicitement identifiable, expected_count = 0.
+6. Si le rapport répète la même anomalie dans une synthèse, une fiche, une photo ou une annexe, ne la compte qu'une seule fois.
+7. Si deux anomalies différentes concernent le même équipement ou ont la même action, garde deux lignes si le rapport les distingue.
+8. Ne compte jamais comme NC : un équipement simplement contrôlé, une mesure normale, une photo, une valeur conforme, RAS, sans objet, une méthode de contrôle, une référence réglementaire seule, une recommandation générale sans constat d'écart, une page de garde, un sommaire, une légende ou une répétition.
+9. Une ligne disant seulement qu'un contrôle a été réalisé ne devient pas une NC. Il faut un écart, défaut, anomalie, réserve ou action corrective réellement associé à cet élément.
+10. Si le rapport indique qu'un défaut est récurrent, ancien, non levé ou déjà signalé, conserve cette information uniquement si elle est réellement démontrée par le document.
+11. Ne transforme pas une information réglementaire en NC. Les références restent dans evidence.
+12. location = localisation réelle uniquement. equipment = équipement/repère réel uniquement. finding = constat court et fidèle. action = action corrective ou préconisation du rapport. evidence = preuve courte permettant de retrouver l'information.
+13. N'invente aucune donnée. Si une information n'est pas disponible, laisse le champ vide.
+14. Pour chaque anomalie, donne la page où elle est réellement identifiable.
+15. Fais un contrôle final de complétude : compare les anomalies extraites avec la structure maîtresse que tu as identifiée et avec le nombre officiel s'il existe.
 
 FORMAT JSON STRICT :
 {
-  "report_family":"Q18 / Q19 / ATEX / Portes-portails / Chariots / Appareils de levage / Autre",
-  "authoritative_section":"nom exact ou description courte de la section qui fait foi",
-  "expected_count":16,
-  "findings":[{"page":3,"observation_number":"3","novelty":"Nouvelle observation","location":"...","equipment":"...","finding":"...","action":"...","priority":"Normale","evidence":"preuve courte du rapport"}],
-  "total_observations_detected":16,
-  "pages_covered":[1,2,3],
-  "notes":"contrôle de complétude effectué"
+  "report_family":"type réellement identifié ou Autre",
+  "authoritative_section":"section/tableau/fiches qui font foi, ou description précise si plusieurs sources",
+  "expected_count":0,
+  "findings":[{"page":1,"observation_number":"","novelty":"","location":"","equipment":"","finding":"","action":"","priority":"Normale","evidence":""}],
+  "total_observations_detected":0,
+  "pages_covered":[1],
+  "notes":"explique brièvement comment la complétude a été vérifiée"
 }
 
-NE RETOURNE QUE LES OBSERVATIONS RÉELLES. N'AJOUTE PAS de candidats « à vérifier » simplement parce qu'un texte semble anormal.`;
+NE RETOURNE QUE LES ANOMALIES RÉELLES ET DISTINCTES. AUCUN PLAFOND ARBITRAIRE. NE PRODUIS PAS DE CANDIDATS « À VÉRIFIER ».`;
 
-    const firstReply=await callAiEndpointV2(prompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
+    // Première passe : compréhension documentaire indépendante du nombre de NC.
+    const orientationPrompt=`Lis le PDF ENTIER et construis une CARTE DE STRUCTURE du rapport. Ne donne pas encore la liste des NC.
+
+Tu dois déterminer sans supposer le type de rapport :
+- la famille/type de contrôle ;
+- quelles sections, tableaux, fiches ou annexes contiennent les vrais écarts ;
+- quelle section fait le plus autorité pour compter les écarts ;
+- comment une observation/anomalie distincte est délimitée dans ce document ;
+- comment sont reliés lieu, équipement, constat et action ;
+- comment le document indique éventuellement nouveau/récurrent/ancien/non levé ;
+- s'il existe un nombre officiel d'écarts, et où il apparaît.
+
+Ne compte pas les NC à ce stade. Ne te base sur aucun modèle préexistant.
+
+Retourne uniquement : {"report_family":"","authoritative_section":"","record_definition":"","location_pattern":"","action_pattern":"","novelty_rule":"","expected_count":0,"count_source":"","layout_notes":""}`;
+    let orientation={};
+    try{
+      const or=await callAiEndpointV2(orientationPrompt,{pdfBase64:pdf64,responseSchema:{type:'object',properties:{report_family:{type:'string'},authoritative_section:{type:'string'},record_definition:{type:'string'},location_pattern:{type:'string'},action_pattern:{type:'string'},novelty_rule:{type:'string'},expected_count:{type:'integer'},count_source:{type:'string'},layout_notes:{type:'string'}},required:['report_family','authoritative_section','record_definition','location_pattern','action_pattern','novelty_rule','expected_count','count_source','layout_notes']} });
+      orientation=extractJsonObject(or)||{};
+    }catch(e){r.ai.orientationWarning=String(e?.message||e)}
+    r.ai.orientation=orientation;
+    r.ai.reportFamily=String(orientation.report_family||'');
+    r.ai.authoritativeSection=String(orientation.authoritative_section||'');
+    r.ai.aiExpectedCount=Number(orientation.expected_count||0);
+    const extractionPrompt=`${prompt}\n\nCARTE DE STRUCTURE OBTENUE PAR UNE PASSE INDÉPENDANTE :\n${JSON.stringify(orientation)}\n\nUtilise cette carte comme aide, mais vérifie toujours ses conclusions directement contre le PDF. Elle n'est pas une liste de NC et ne doit jamais imposer un nombre.`;
+    const firstReply=await callAiEndpointV2(extractionPrompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
     const firstJson=extractJsonObject(firstReply)||{};
     let first=dedupeAiCandidates(parseAiFindings(firstReply).map(x=>({...x,origin:'ai',confidence:Math.max(Number(x.confidence||0),.9)})));
-    const expected=Number(firstJson.expected_count||firstJson.total_observations_detected||0);
-    r.ai.reportFamily=String(firstJson.report_family||'');
-    r.ai.authoritativeSection=String(firstJson.authoritative_section||'');
+    const expected=Number(firstJson.expected_count||orientation.expected_count||0);
+    r.ai.reportFamily=String(firstJson.report_family||r.ai.reportFamily||'');
+    r.ai.authoritativeSection=String(firstJson.authoritative_section||r.ai.authoritativeSection||'');
     r.ai.aiExpectedCount=expected;
     r.ai.status=`⏳ Vérification croisée : ${first.length} anomalie(s) détectée(s)${expected?` / ${expected} annoncée(s)`:''}…`;
     saveDB();render();
 
     let final=first;
-    if(first.length){
-      const compact=first.map((x,i)=>({id:i+1,page:x.page,observation_number:x.reportObservationNo||'',novelty:x.observationKind||'',location:x.location||'',equipment:x.equipment||'',finding:x.description||'',action:x.action||'',priority:x.priority||'',evidence:x.sourceQuote||''}));
-      const validationPrompt=`Tu es le contrôleur final d'une extraction de non-conformités issue d'un rapport PDF que tu peux lire directement.
+    // Seconde passe : le contrôleur relit le PDF complet. Elle est exécutée même si la première passe n'a trouvé aucune NC.
+    const compact=first.map((x,i)=>({id:i+1,page:x.page,observation_number:x.reportObservationNo||'',novelty:x.observationKind||'',location:x.location||'',equipment:x.equipment||'',finding:x.description||'',action:x.action||'',priority:x.priority||'',evidence:x.sourceQuote||''}));
+    const validationPrompt=`Tu es le contrôleur qualité FINAL. Tu peux lire le PDF entier fourni avec cette demande.
 
-Liste proposée par la première analyse :
+Voici la carte de structure identifiée :
+${JSON.stringify(orientation)}
+
+Voici la première extraction (elle peut être incomplète ou contenir des faux positifs) :
 ${JSON.stringify(compact)}
 
-Vérifie cette liste CONTRE LE PDF ENTIER.
+RELIS LE PDF ENTIER ET RECONSTRUIS LA LISTE FINALE.
 
-RÈGLE ABSOLUE : retourne uniquement les anomalies réellement distinctes et actionnables. Supprime les faux positifs provenant de lignes conformes, mesures, photos, répétitions, équipements simplement inspectés, RAS, texte générique ou recommandations sans constat. Si une même anomalie apparaît plusieurs fois, fusionne-la. Si une anomalie réelle manque, ajoute-la. Ne te fie pas au nombre de la liste proposée.
+RÈGLES :
+- Trouve toi-même la source documentaire qui fait foi dans CE rapport ; ne suppose aucun format.
+- Compte une observation/anomalie/écart/réserve distinct comme le document le fait lui-même.
+- Si le rapport possède une liste maîtresse, des fiches détaillées ou un tableau d'écarts, utilise cette structure pour contrôler la complétude.
+- Une même anomalie répétée dans plusieurs sections/pages = une seule NC.
+- Deux anomalies différentes = deux NC même si l'action est identique.
+- Les équipements simplement contrôlés, mesures, photos, RAS, conformités, références réglementaires, méthodes et recommandations générales sans écart = pas de NC.
+- Si une vraie NC manque dans la première extraction, ajoute-la.
+- Si une proposition est un faux positif, supprime-la.
+- N'invente aucune donnée.
+- Si un nombre officiel d'écarts est explicitement présent, utilise-le comme contrôle, mais ne force jamais le résultat à atteindre ce nombre artificiellement.
+- total_observations_detected = nombre FINAL de NC distinctes réellement présentes.
 
-Trouve d'abord la liste maîtresse / section de référence et son nombre officiel si disponible. Pour Q19, par exemple, chaque « Fiche d'anomalie » correspond à une anomalie, tandis que les lignes d'équipements et mesures du tableau de synthèse ne sont pas des anomalies supplémentaires. Pour toutes les autres familles, applique la même logique documentaire à leur propre structure.
-
-Retourne le même JSON structuré et complet. total_observations_detected doit être le nombre FINAL réellement retenu.`;
-      try{
-        const vr=await callAiEndpointV2(validationPrompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
-        const vj=extractJsonObject(vr)||{};
-        const vf=dedupeAiCandidates(parseAiFindings(vr).map(x=>({...x,origin:'ai-validated',confidence:Math.max(Number(x.confidence||0),.96)})));
-        const vt=Number(vj.total_observations_detected||vj.expected_count||0);
-        if(vf.length && (!expected || Math.abs(vf.length-(vt||expected))<=1 || vf.length<first.length)){
-          final=vf;
-          r.ai.reportFamily=String(vj.report_family||r.ai.reportFamily||'');
-          r.ai.authoritativeSection=String(vj.authoritative_section||r.ai.authoritativeSection||'');
-          r.ai.aiExpectedCount=vt||expected;
-        }
-      }catch(e){r.ai.validationWarning=String(e?.message||e)}
-    }
+Retourne exactement le JSON structuré demandé, avec la liste complète des NC et rien d'autre.`;
+    try{
+      const vr=await callAiEndpointV2(validationPrompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
+      const vj=extractJsonObject(vr)||{};
+      const vf=dedupeAiCandidates(parseAiFindings(vr).map(x=>({...x,origin:'ai-validated',confidence:Math.max(Number(x.confidence||0),.96)})));
+      // Une réponse de validation structurée devient la vérité finale, même si son nombre diffère de la première passe.
+      if(vj && Array.isArray(vj.findings)){
+        final=vf;
+        const vt=Number(vj.total_observations_detected||0);
+        if(vj.report_family)r.ai.reportFamily=String(vj.report_family);
+        if(vj.authoritative_section)r.ai.authoritativeSection=String(vj.authoritative_section);
+        if(vt)r.ai.aiExpectedCount=Number(vj.expected_count||expected||0);
+      }
+    }catch(e){r.ai.validationWarning=String(e?.message||e)}
 
     // L'extraction locale est uniquement un contrôle indicatif : elle ne crée plus de NC.
     const localCount=Number(r.ai.structuredCount||0),finalCount=final.length,expectedFinal=Number(r.ai.aiExpectedCount||0);
