@@ -400,145 +400,98 @@ async function analyzePdfDirect(id){
   const file=__pdfFiles[id];
   if(!file){toast('Choisis d’abord le PDF du rapport.');document.getElementById('reportPdfInput')?.click();return}
   if(file.size>50*1024*1024){toast('PDF trop lourd (maximum Gemini : 50 Mo).');return}
-
   aiBusy=true;
-  r.ai={...(r.ai||{}),fileName:file.name,status:'⏳ Préparation du rapport et contrôle de complétude…'};
+  r.ai={...(r.ai||{}),fileName:file.name,candidates:[],status:'⏳ Gemini lit le rapport complet et cherche sa source officielle de non-conformités…'};
   saveDB();render();
-
   try{
-    /*
-     * 1) Lecture locale du PDF.
-     * Elle sert uniquement de filet de sécurité pour les rapports dont le
-     * tableau récapitulatif est exploitable (Q18 notamment).
-     */
-    if(!r.ai?.pageTexts?.length){
-      await readPdfIntoReport(file,id);
-    }
+    if(!r.ai?.pageTexts?.length)await readPdfIntoReport(file,id);
     const local=extractVgpObservationSummary(r.ai?.rawText||'',r.ai?.pageTexts||[],r.ai?.observationMarkers||{});
-    const structured=(local.candidates||[]).map(x=>({...x,origin:'structured'}));
-    r.ai.structuredCount=structured.length;
+    r.ai.structuredCount=local.candidates?.length||0;
+    const buf=new Uint8Array(await file.arrayBuffer());let bin='';
+    for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
+    const pdf64=btoa(bin);
+    const prompt=`Analyse ce rapport de vérification PDF EN ENTIER comme un expert HSE. Le but est de créer un plan d'action, PAS de faire une extraction de mots-clés.
 
-    /*
-     * 2) Gemini reçoit le PDF ORIGINAL, pas seulement le texte extrait.
-     * Cela conserve tableaux, couleurs, légendes, images et mise en page.
-     */
-    r.ai.status=`⏳ Gemini analyse le PDF complet…${structured.length?` (${structured.length} observation(s) de contrôle détectée(s) localement)` :''}`;
+MISSION : identifier uniquement les NON-CONFORMITÉS / OBSERVATIONS / ANOMALIES / RÉSERVES réellement signalées par l'organisme de contrôle et pour lesquelles une action corrective, une préconisation ou une levée est attendue.
+
+MÉTHODE OBLIGATOIRE :
+1. Identifie d'abord la famille et la structure du rapport : Q18, Q19, ATEX/DRPE, portes/portails, chariot, appareil de levage, machine, etc.
+2. Trouve la SECTION DE RÉFÉRENCE qui fait foi pour compter les anomalies : liste récapitulative, fiches d'anomalie, observations, non-conformités, réserves, anomalies, écarts, défauts, préconisations, synthèse ou équivalent.
+3. Si le rapport annonce un nombre officiel d'anomalies/observations, utilise ce nombre comme contrôle de complétude.
+4. Ne compte JAMAIS comme NC un équipement simplement contrôlé, une ligne de tableau, une mesure, une photo, une valeur conforme, une mention RAS, une recommandation générale sans écart identifié, une répétition de la même anomalie, une page de garde, un sommaire ou une légende.
+5. Pour Q19, chaque « Fiche d'anomalie » correspond à UNE anomalie. Les équipements et mesures du tableau de synthèse ne sont pas des NC supplémentaires.
+6. Pour Q18, la « Liste récapitulative des observations » est la liste maîtresse si elle existe. Pour les autres familles, utilise la liste ou les fiches équivalentes réellement présentes.
+7. Une anomalie décrite sur plusieurs pages/fiches doit rester UNE seule observation.
+8. Si une anomalie est répétée ou déjà connue, conserve une seule ligne et indique Nouvelle observation / Ancienne observation / Récurrente seulement si le rapport permet réellement de le déterminer.
+9. N'invente aucune donnée.
+10. location = localisation uniquement. equipment = équipement ou repère uniquement. finding = constat court. action = action corrective ou préconisation. Les références réglementaires vont dans evidence, jamais dans finding/action.
+11. Conserve la page où l'observation est réellement identifiable.
+12. Dernier contrôle : le nombre de findings doit correspondre aux anomalies DISTINCTES réellement présentes dans le rapport, pas au nombre de mots-clés trouvés.
+
+FORMAT JSON STRICT :
+{
+  "report_family":"Q18 / Q19 / ATEX / Portes-portails / Chariots / Appareils de levage / Autre",
+  "authoritative_section":"nom exact ou description courte de la section qui fait foi",
+  "expected_count":16,
+  "findings":[{"page":3,"observation_number":"3","novelty":"Nouvelle observation","location":"...","equipment":"...","finding":"...","action":"...","priority":"Normale","evidence":"preuve courte du rapport"}],
+  "total_observations_detected":16,
+  "pages_covered":[1,2,3],
+  "notes":"contrôle de complétude effectué"
+}
+
+NE RETOURNE QUE LES OBSERVATIONS RÉELLES. N'AJOUTE PAS de candidats « à vérifier » simplement parce qu'un texte semble anormal.`;
+
+    const firstReply=await callAiEndpointV2(prompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
+    const firstJson=extractJsonObject(firstReply)||{};
+    let first=dedupeAiCandidates(parseAiFindings(firstReply).map(x=>({...x,origin:'ai',confidence:Math.max(Number(x.confidence||0),.9)})));
+    const expected=Number(firstJson.expected_count||firstJson.total_observations_detected||0);
+    r.ai.reportFamily=String(firstJson.report_family||'');
+    r.ai.authoritativeSection=String(firstJson.authoritative_section||'');
+    r.ai.aiExpectedCount=expected;
+    r.ai.status=`⏳ Vérification croisée : ${first.length} anomalie(s) détectée(s)${expected?` / ${expected} annoncée(s)`:''}…`;
     saveDB();render();
 
-    const buf=new Uint8Array(await file.arrayBuffer());
-    let bin='';
-    for(let i=0;i<buf.length;i+=0x8000)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
-    const baseline=structured.map(x=>({
-      observation_number:x.reportObservationNo||'',
-      page:x.page||'',
-      location:x.location||'',
-      equipment:x.equipment||'',
-      finding:x.description||'',
-      action:x.action||''
-    }));
+    let final=first;
+    if(first.length){
+      const compact=first.map((x,i)=>({id:i+1,page:x.page,observation_number:x.reportObservationNo||'',novelty:x.observationKind||'',location:x.location||'',equipment:x.equipment||'',finding:x.description||'',action:x.action||'',priority:x.priority||'',evidence:x.sourceQuote||''}));
+      const validationPrompt=`Tu es le contrôleur final d'une extraction de non-conformités issue d'un rapport PDF que tu peux lire directement.
 
-    const prompt=`Analyse ce rapport VGP PDF EN ENTIER, page par page, comme un contrôleur qualité d'extraction.
+Liste proposée par la première analyse :
+${JSON.stringify(compact)}
 
-OBJECTIF PRINCIPAL : produire la liste COMPLETE des non-conformités / observations donnant lieu à une action.
+Vérifie cette liste CONTRE LE PDF ENTIER.
 
-RÈGLES ABSOLUES :
-1. Ne fixe AUCUN nombre maximum de NC.
-2. Compte d'abord toutes les observations distinctes du rapport, puis produis UNE ligne JSON par observation.
-3. Deux observations ayant la même action mais un lieu, matériel ou numéro différent restent DEUX observations.
-4. Conserve le numéro d'observation du rapport lorsqu'il existe.
-5. Conserve la vraie page PDF.
-6. Sépare toujours : location = zone/localisation ; equipment = matériel ou repère ; finding = constat ; action = action corrective.
-7. Ne mets jamais une référence réglementaire dans finding ou action.
-8. Conserve "Nouvelle observation" / "Ancienne observation" / "Récurrente" uniquement si le document permet réellement de le déterminer.
-9. Lis aussi les tableaux, légendes, couleurs, symboles et images : ils peuvent porter le numéro ou le caractère nouveau/récurrent.
-10. Ne fusionne jamais deux observations distinctes.
-11. N'invente aucune information absente.
-12. Si le rapport possède une "Liste récapitulative des observations", utilise-la comme référence de complétude, mais vérifie les détails dans les pages concernées.
-13. Avant de répondre, vérifie que le nombre de lignes retournées correspond au nombre d'observations distinctes réellement présentes. Si tu as un doute, conserve l'observation plutôt que de la supprimer.
+RÈGLE ABSOLUE : retourne uniquement les anomalies réellement distinctes et actionnables. Supprime les faux positifs provenant de lignes conformes, mesures, photos, répétitions, équipements simplement inspectés, RAS, texte générique ou recommandations sans constat. Si une même anomalie apparaît plusieurs fois, fusionne-la. Si une anomalie réelle manque, ajoute-la. Ne te fie pas au nombre de la liste proposée.
 
-RÉSULTAT JSON :
-{
-  "findings":[
-    {
-      "page":2,
-      "observation_number":"1",
-      "novelty":"Nouvelle observation",
-      "location":"Zone / bâtiment / local complet",
-      "equipment":"Matériel ou repère",
-      "finding":"Constat court et fidèle au rapport",
-      "action":"Action corrective du rapport",
-      "priority":"Normale",
-      "evidence":"Preuve courte tirée du rapport"
-    }
-  ],
-  "total_observations_detected":19,
-  "pages_covered":[2,3,4,5],
-  "notes":""
-}
+Trouve d'abord la liste maîtresse / section de référence et son nombre officiel si disponible. Pour Q19, par exemple, chaque « Fiche d'anomalie » correspond à une anomalie, tandis que les lignes d'équipements et mesures du tableau de synthèse ne sont pas des anomalies supplémentaires. Pour toutes les autres familles, applique la même logique documentaire à leur propre structure.
 
-POINT DE CONTRÔLE LOCAL (ce n'est PAS une limite et il peut être incomplet) :
-${JSON.stringify(baseline)}`;
-
-    const reply=await callAiEndpointV2(prompt,{
-      pdfBase64:btoa(bin),
-      responseSchema:geminiFindingResponseSchema()
-    });
-
-    const parsed=extractJsonObject(reply)||{};
-    let found=dedupeAiCandidates(parseAiFindings(reply).map(f=>({...f,chunkIndex:0,origin:'ai'})))
-      .map(c=>({...c,confidence:.92}));
-    let aiTotal=Number(parsed.total_observations_detected||parsed.total||0);
-
-    /*
-     * 3) Si Gemini annonce plus d'observations qu'il n'en a sorties,
-     * on lui demande uniquement les manquantes. Ce second appel n'est
-     * déclenché qu'en cas de signal d'incomplétude.
-     */
-    if(aiTotal>found.length){
-      r.ai.status=`⚠ Gemini a compté ${aiTotal} observation(s) mais n'en a détaillé que ${found.length} — recherche des manquantes…`;
-      saveDB();render();
-      const already=found.map(x=>({
-        observation_number:x.reportObservationNo||'',
-        page:x.page||'',
-        location:x.location||'',
-        equipment:x.equipment||'',
-        finding:x.description||'',
-        action:x.action||''
-      }));
+Retourne le même JSON structuré et complet. total_observations_detected doit être le nombre FINAL réellement retenu.`;
       try{
-        const missingReply=await callAiEndpointV2(`Relis le PDF ORIGINAL. Première extraction : ${found.length}. Le contrôle de comptage indique ${aiTotal} observation(s). Cherche UNIQUEMENT les observations distinctes manquantes. Ne répète aucune observation déjà listée ci-dessous. Si le numéro d'observation existe, utilise-le. Réponds uniquement avec le même JSON structuré.\n\nOBSERVATIONS DÉJÀ TROUVÉES :\n${JSON.stringify(already)}`,{
-          pdfBase64:btoa(bin),
-          responseSchema:geminiFindingResponseSchema()
-        });
-        const missing=dedupeAiCandidates(parseAiFindings(missingReply).map(f=>({...f,origin:'ai-added'})));
-        found=dedupeAiCandidates([...found,...missing]);
-      }catch(e){console.warn('Contrôle de complétude Gemini ignoré',e)}
+        const vr=await callAiEndpointV2(validationPrompt,{pdfBase64:pdf64,responseSchema:geminiFindingResponseSchema()});
+        const vj=extractJsonObject(vr)||{};
+        const vf=dedupeAiCandidates(parseAiFindings(vr).map(x=>({...x,origin:'ai-validated',confidence:Math.max(Number(x.confidence||0),.96)})));
+        const vt=Number(vj.total_observations_detected||vj.expected_count||0);
+        if(vf.length && (!expected || Math.abs(vf.length-(vt||expected))<=1 || vf.length<first.length)){
+          final=vf;
+          r.ai.reportFamily=String(vj.report_family||r.ai.reportFamily||'');
+          r.ai.authoritativeSection=String(vj.authoritative_section||r.ai.authoritativeSection||'');
+          r.ai.aiExpectedCount=vt||expected;
+        }
+      }catch(e){r.ai.validationWarning=String(e?.message||e)}
     }
 
-    /*
-     * 4) Fusion sans perte : le tableau structuré local reste présent même
-     * si Gemini en a oublié une partie ; Gemini enrichit les lignes et ajoute
-     * les observations que le moteur local ne sait pas lire.
-     */
-    const merged=mergeAiAndStructured(structured,found);
-    r.ai={
-      ...r.ai,
-      candidates:merged,
-      aiCount:found.length,
-      aiReportedTotal:aiTotal,
-      aiFinishedAt:new Date().toISOString(),
-      status:`✓ ${merged.length} non-conformité(s) préparée(s)${structured.length?` — ${structured.length} issue(s) du contrôle de complétude du rapport`:''}. Vérifie puis ajoute au plan.`
-    };
-    saveDB();
-    toast(r.ai.status);
-  }catch(e){
-    console.error(e);
-    r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e.message||e}`};
-    toast('Erreur IA : '+(e.message||e));
-  }finally{
-    aiBusy=false;saveDB();render();
-  }
+    // L'extraction locale est uniquement un contrôle indicatif : elle ne crée plus de NC.
+    const localCount=Number(r.ai.structuredCount||0),finalCount=final.length,expectedFinal=Number(r.ai.aiExpectedCount||0);
+    let warning='';
+    if(expectedFinal && finalCount!==expectedFinal)warning=` ⚠ Le rapport annonce ${expectedFinal} observation(s), Gemini en retient ${finalCount}. Vérifie le rapport.`;
+    if(localCount&&expectedFinal&&localCount!==expectedFinal)r.ai.localCrossCheck=`Extraction locale indicative : ${localCount}; attendu selon rapport/IA : ${expectedFinal}.`;
+    r.ai.candidates=final;r.ai.aiCount=finalCount;
+    r.ai.status=`Analyse terminée : ${finalCount} non-conformité(s) réelle(s) proposée(s).${warning}`;
+    r.ai.aiFinishedAt=new Date().toISOString();saveDB();render();toast(`Analyse IA terminée : ${finalCount} NC proposée(s).`);
+  }catch(e){console.error(e);r.ai={...(r.ai||{}),status:`Analyse IA échouée : ${e?.message||e}`};saveDB();toast('Analyse IA échouée : '+(e?.message||e));render()}
+  finally{aiBusy=false;saveDB();render()}
 }
+
 async function quickImportPdf(ev){
   const f=ev.target.files?.[0];ev.target.value='';if(!f)return;
   if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){toast('Choisis un fichier PDF.');return}
