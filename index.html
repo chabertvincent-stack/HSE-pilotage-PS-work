@@ -89,6 +89,18 @@ tr:last-child td{border-bottom:0}.empty{text-align:center;padding:35px;color:var
   .unit-grid{grid-template-columns:1fr}.report-grid{gap:12px}.dropzone{padding:14px}.tablewrap.m-cards{overflow:visible;border:0;background:transparent}.tablewrap.m-cards table,.tablewrap.m-cards tbody{display:block;min-width:0;width:100%}
   .tablewrap.m-cards thead{display:none}.tablewrap.m-cards tr{display:block;border:1px solid var(--line);border-radius:12px;padding:4px 12px;margin-bottom:10px;background:#fff}.tablewrap.m-cards td{display:block;border-bottom:1px dashed var(--line);padding:8px 0}.tablewrap.m-cards td:last-child{border-bottom:0}.tablewrap.m-cards td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:850;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 }
+
+.vgp-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.vgp-kpi{padding:13px;border:1px solid var(--line,#e6e6ee);border-radius:14px;background:var(--card,#fff)}
+.vgp-kpi .num{font-size:23px;font-weight:900;margin-top:4px}
+.vgp-kpi .lbl{font-size:11px;font-weight:800;color:#6b6b78;text-transform:uppercase}
+.vgp-objective{border:1px solid var(--line,#e6e6ee);border-radius:14px;padding:14px}
+.vgp-objective-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.vgp-target{font-size:12px;font-weight:800}
+.vgp-target.ok{color:#16844b}.vgp-target.ko{color:#b42318}
+.vgp-progress-wrap{height:10px;border-radius:999px;background:#ececf2;overflow:hidden;margin-top:8px}
+.vgp-progress-wrap>span{display:block;height:100%;border-radius:999px;background:currentColor}
+@media(max-width:900px){.vgp-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 <style>@media(max-width:900px){.ai-first{order:-1}}</style></head>
 <body>
@@ -179,9 +191,10 @@ function loadDB(){
       workUnits:Array.isArray(x.workUnits)?x.workUnits:[],
       personnel:Array.isArray(x.personnel)?x.personnel:[],
       chemicalSettings:x.chemicalSettings||{fdsAgeYears:5,alertMonths:6},
-      aiSettings:x.aiSettings||null
+      aiSettings:x.aiSettings||null,
+      vgpSettings:{globalTarget:Math.min(100,Math.max(0,Number(x.vgpSettings?.globalTarget ?? 90))),typeTargets:(x.vgpSettings?.typeTargets&&typeof x.vgpSettings.typeTargets==='object')?x.vgpSettings.typeTargets:{}}
     };
-  }catch{return {vgpTypes:VGP_DEFAULTS,vgpEquipment:[],vgpReports:[],vgpFindings:[],chemicalProducts:[],chemicalRequests:[],chemicalActions:[],workUnits:[],personnel:[],chemicalSettings:{fdsAgeYears:5,alertMonths:6}}}
+  }catch{return {vgpTypes:VGP_DEFAULTS,vgpEquipment:[],vgpReports:[],vgpFindings:[],chemicalProducts:[],chemicalRequests:[],chemicalActions:[],workUnits:[],personnel:[],chemicalSettings:{fdsAgeYears:5,alertMonths:6},vgpSettings:{globalTarget:90,typeTargets:{}}}}
 }
 
 function nav(){
@@ -221,22 +234,53 @@ function dueState(date,alertDays=30){
 function reportNext(t,inspection){return inspection?addMonths(inspection,t.periodicityMonths):''}
 function reportReference(vgpKey, reportDate, excludeId=''){const t=vgpType(vgpKey);if(!t)return '';const d=String(reportDate||'');const year=(d.match(/^(\d{4})/)||[])[1]||String(new Date().getFullYear());const code=String(t.code||t.key||'VGP').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'vgp';const count=db.vgpReports.filter(r=>String(r.id)!==String(excludeId)&&String(r.vgpKey||r.reportType)===String(t.key)&&String(r.reportDate||r.inspection||'').startsWith(year)).length+1;return `${year}-${code}-${String(count).padStart(2,'0')}`}
 function reportYear(r){return String(r.inspection||r.created||now()).slice(0,4)}
+function vgpCounts(findings){
+  const a=findings||[];
+  return {
+    total:a.length,
+    todo:a.filter(x=>findingStatus(x)==='À traiter').length,
+    progress:a.filter(x=>findingStatus(x)==='En cours').length,
+    closed:a.filter(x=>findingStatus(x)==='Clôturée').length,
+    overdue:a.filter(x=>findingStatus(x)==='Délai dépassé').length,
+    cancelled:a.filter(x=>findingStatus(x)==='Annulée').length
+  };
+}
+function vgpPercent(findings){
+  const c=vgpCounts(findings);
+  return c.total ? Math.round(c.closed/c.total*100) : 100;
+}
+function vgpTargetForType(key){
+  const n=Number(db.vgpSettings?.typeTargets?.[key]);
+  return Number.isFinite(n)&&n>=0&&n<=100?n:Number(db.vgpSettings?.globalTarget ?? 90);
+}
+function vgpObjectiveState(findings,target){
+  const pct=vgpPercent(findings);
+  return {pct,target:Number(target||0),ok:pct>=Number(target||0)};
+}
 function vgpStats(){
   const f=db.vgpFindings;
-  const open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length;
-  const closed=f.filter(x=>findingStatus(x)==='Clôturée').length;
-  const overdue=f.filter(x=>findingStatus(x)==='Délai dépassé').length;
+  const c=vgpCounts(f);
+  const open=c.todo+c.progress+c.overdue;
   const reports=db.vgpReports.length;
   const equipments=db.vgpEquipment.length;
   const dueSoon=db.vgpEquipment.filter(e=>dueState(e.nextDue,vgpType(e.vgpKey).alertDays).key==='soon').length;
   const dueLate=db.vgpEquipment.filter(e=>dueState(e.nextDue,vgpType(e.vgpKey).alertDays).key==='late').length;
-  return {open,closed,overdue,reports,equipments,dueSoon,dueLate,totalFindings:f.length}
+  return {open,closed:c.closed,overdue:c.overdue,reports,equipments,dueSoon,dueLate,totalFindings:c.total,counts:c};
 }
-function vgpCompletion(reportId){
-  const f=findingsForReport(reportId);
-  if(!f.length)return 100;
-  const done=f.filter(x=>findingStatus(x)==='Clôturée').length;
-  return Math.round(done/f.length*100);
+function vgpCompletion(reportId){return vgpPercent(findingsForReport(reportId));}
+function vgpIndicatorBlock(findings,target,label){
+  const c=vgpCounts(findings),o=vgpObjectiveState(findings,target);
+  return `<div class="card vgp-objective">
+    <div class="vgp-objective-head"><div><b>${esc(label||'Avancement des NC')}</b><div class="small muted">${c.total} NC au total</div></div><div class="vgp-target ${o.ok?'ok':'ko'}">${o.pct}% / objectif ${o.target}% ${o.ok?'✓':'✕'}</div></div>
+    <div class="vgp-progress-wrap" style="color:${o.ok?'#16844b':'#b42318'}"><span style="width:${Math.min(100,o.pct)}%"></span></div>
+    <div class="vgp-kpi-grid" style="margin-top:10px">
+      <div class="vgp-kpi"><div class="lbl">À traiter</div><div class="num">${c.todo}</div></div>
+      <div class="vgp-kpi"><div class="lbl">En cours</div><div class="num">${c.progress}</div></div>
+      <div class="vgp-kpi"><div class="lbl">Clôturées</div><div class="num">${c.closed}</div></div>
+      <div class="vgp-kpi"><div class="lbl">Délai dépassé</div><div class="num">${c.overdue}</div></div>
+      <div class="vgp-kpi"><div class="lbl">Réalisation</div><div class="num">${o.pct}%</div></div>
+    </div>
+  </div>`;
 }
 
 function vgpPage(el){
@@ -248,7 +292,7 @@ function vgpPage(el){
   el.innerHTML=`
   <div class="pagehead"><div><h1>VGP & conformité</h1><div class="muted">Registre des équipements, rapports, échéances et plan d’action des non-conformités.</div></div><div class="page-actions"><input id="quickVgpPdf" type="file" accept="application/pdf" style="display:none" onchange="quickImportPdf(event)">
 <button class="btn blue" onclick="document.getElementById('quickVgpPdf').click()">📄 Import intelligent PDF</button>
-<button class="btn" onclick="openGlobalPlan()">☷ Plan général</button><button class="btn primary" onclick="openReportForm(null,db.vgpTypes[0]?.key)">＋ Nouveau rapport</button></div></div>
+<button class="btn" onclick="openVgpObjectives()">🎯 Objectifs</button><button class="btn" onclick="openGlobalPlan()">☷ Plan général</button><button class="btn primary" onclick="openReportForm(null,db.vgpTypes[0]?.key)">＋ Nouveau rapport</button></div></div>
   <div class="grid stats">
     <div class="card"><div class="stat-label">Équipements suivis</div><div class="stat-value">${s.equipments}</div><div class="stat-foot">Tous types de VGP</div></div>
     <div class="card"><div class="stat-label">Rapports archivés</div><div class="stat-value">${s.reports}</div><div class="stat-foot">Historique conservé</div></div>
@@ -256,9 +300,9 @@ function vgpPage(el){
     <div class="card"><div class="stat-label">Échéances proches</div><div class="stat-value">${s.dueSoon}</div><div class="stat-foot">dans les 30 jours</div></div>
     <div class="card"><div class="stat-label">Échéances dépassées</div><div class="stat-value">${s.dueLate}</div><div class="stat-foot">${s.dueLate?'À traiter':'Aucune'}</div></div>
   </div>
-  <div class="notice blue" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>Importe un rapport PDF</b> : l’IA détecte les non-conformités, les zones et les actions, et prépare le plan d’action.</div><button class="btn primary" onclick="document.getElementById('quickVgpPdf').click()">📄 Importer un PDF</button></div><div class="section-head"><h2>Familles de VGP</h2><button class="btn sm" onclick="openVgpTypeForm()">＋ Ajouter une famille</button></div>
+  ${vgpIndicatorBlock(db.vgpFindings,Number(db.vgpSettings?.globalTarget||90),'Avancement général des VGP')}\n  <div class="notice blue" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>Importe un rapport PDF</b> : l’IA détecte les non-conformités, les zones et les actions, et prépare le plan d’action.</div><button class="btn primary" onclick="document.getElementById('quickVgpPdf').click()">📄 Importer un PDF</button></div><div class="section-head"><h2>Familles de VGP</h2><button class="btn sm" onclick="openVgpTypeForm()">＋ Ajouter une famille</button></div>
   <div class="grid family-grid">${allTypes().map(t=>{
-    const rs=reportsForType(t.key), eq=equipmentForType(t.key), f=rs.flatMap(r=>findingsForReport(r.id)), open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length;
+    const rs=reportsForType(t.key), eq=equipmentForType(t.key), f=rs.flatMap(r=>findingsForReport(r.id)), open=f.filter(x=>!['Clôturée','Annulée'].includes(findingStatus(x))).length, pct=vgpPercent(f), target=vgpTargetForType(t.key);
     const latest=rs.slice().sort((a,b)=>String(b.inspection||'').localeCompare(String(a.inspection||'')))[0];
     const due=latest?.next||'';
     const st=dueState(due,t.alertDays);
@@ -301,6 +345,7 @@ function vgpTypePage(el,key){
    <div class="card"><div class="stat-label">NC ouvertes</div><div class="stat-value">${open}</div></div>
    <div class="card"><div class="stat-label">Prochaine échéance</div><div class="stat-value" style="font-size:19px">${esc(rs[0]?.next||'—')}</div></div>
   </div>
+  ${vgpIndicatorBlock(f,vgpTargetForType(key),'Avancement '+t.name)}
   <div class="section-head"><h2>Équipements suivis</h2><button class="btn sm" onclick="openEquipmentForm(null,'${esc(key)}')">＋ Ajouter un équipement</button></div>
   <div class="tablewrap m-cards"><table><thead><tr><th>Équipement</th><th>Localisation</th><th>Identifiant / série</th><th>Dernière VGP</th><th>Prochaine</th><th>État</th><th></th></tr></thead><tbody>${eq.length?eq.map(e=>{
     const ds=dueState(e.nextDue,t.alertDays);
@@ -343,7 +388,7 @@ function vgpReportPage(el,id){
   const t=vgpType(r.vgpKey||r.reportType),f=findingsForReport(id).slice().sort((a,b)=>String(a.due||'9999').localeCompare(String(b.due||'9999'))),p=vgpCompletion(id),st=findingStatus;
   el.innerHTML=`<div class="breadcrumb"><button class="chip click" onclick="openVgpType('${esc(t.key)}')">← ${esc(t.name)}</button><span class="chip">${esc(t.code)}</span><span class="chip">${esc(reportYear(r))}</span><span class="chip">${esc(r.reportNumber||'Rapport')}</span></div>
   <div class="pagehead"><div><h1>${esc(r.reportNumber||'Rapport VGP')}</h1><div class="muted">${esc(t.name)} • inspection du ${esc(r.inspection||'—')}</div></div><div class="page-actions"><button class="btn" onclick="openReportForm('${r.id}')">Modifier</button><button class="btn danger" onclick="deleteReport('${r.id}')">Supprimer</button></div></div>
-  <div class="grid report-grid">
+  ${vgpIndicatorBlock(f,vgpTargetForType(t.key),'Avancement du rapport '+(r.reportNumber||''))}<div class="grid report-grid">
     <div>
       <div class="card">
         <div class="detail-grid">
@@ -990,6 +1035,24 @@ function openEquipmentForm(id,typeKey){
 }
 function deleteEquipment(id){if(!confirm('Supprimer cet équipement ?'))return;db.vgpEquipment=db.vgpEquipment.filter(x=>x.id!==id);saveDB();render();}
 
+function openVgpObjectives(){
+  const global=Number(db.vgpSettings?.globalTarget||90);
+  const rows=allTypes().map(t=>`<div class="field"><label>${esc(t.name)} — objectif de clôture (%)</label><input type="number" min="0" max="100" step="1" name="type_${esc(t.key)}" value="${esc(db.vgpSettings?.typeTargets?.[t.key] ?? global)}"></div>`).join('');
+  showModal(`<div class="modalhead"><h2>🎯 Objectifs de réalisation VGP</h2><button class="x" onclick="closeModal()">×</button></div>
+  <form id="objectiveForm"><div class="notice blue">Le taux de réalisation correspond au pourcentage de NC <b>clôturées</b> sur le total des NC. Les indicateurs sont calculés automatiquement pour chaque rapport, chaque famille et l'ensemble des VGP.</div>
+  <div class="formgrid"><div class="field"><label>Objectif général (%)</label><input type="number" min="0" max="100" step="1" name="globalTarget" value="${global}" required></div></div>
+  <h3 style="margin:18px 0 8px">Objectifs par famille</h3><div class="formgrid">${rows}</div>
+  <div class="form-actions"><button type="button" class="btn" onclick="closeModal()">Annuler</button><button class="btn primary">Enregistrer les objectifs</button></div></form>`);
+  document.getElementById('objectiveForm').onsubmit=e=>{
+    e.preventDefault();
+    const d=Object.fromEntries(new FormData(e.target));
+    db.vgpSettings=db.vgpSettings||{globalTarget:90,typeTargets:{}};
+    db.vgpSettings.globalTarget=Math.min(100,Math.max(0,Number(d.globalTarget)||0));
+    db.vgpSettings.typeTargets=db.vgpSettings.typeTargets||{};
+    allTypes().forEach(t=>{const v=Number(d['type_'+t.key]);if(Number.isFinite(v))db.vgpSettings.typeTargets[t.key]=Math.min(100,Math.max(0,v));});
+    saveDB();closeModal();render();toast('Objectifs VGP enregistrés.');
+  };
+}
 function openVgpTypeForm(typeKey){
   const ex=typeKey?vgpType(typeKey):null;
   showModal(`<div class="modalhead"><h2>${ex?'Modifier la famille VGP':'Ajouter une famille VGP'}</h2><button class="x" onclick="closeModal()">×</button></div><form id="typeForm"><div class="formgrid">
@@ -1177,7 +1240,7 @@ function closeModal(){document.getElementById('modalRoot').innerHTML=''}
 function migrateV7StoredData(){for(const f of(db.vgpFindings||[])){Object.assign(f,normalizeFindingForApp(f));if(f.reportObservationNo)f.title=observationLabel(f.reportObservationNo,f.observationKind)}for(const r of(db.vgpReports||[]))if(r.ai?.candidates)r.ai.candidates=r.ai.candidates.map(normalizeFindingForApp);saveDB()}
 loadAiSettings(); migrateV7StoredData(); nav();render();
 
-window.go=go;window.toggleMenu=toggleMenu;window.render=render;window.quickNew=quickNew;window.backVgpHome=backVgpHome;window.openVgpType=openVgpType;window.openVgpPlan=openVgpPlan;window.openGlobalPlan=openGlobalPlan;window.openReport=openReport;window.openReportForm=openReportForm;window.deleteReport=deleteReport;window.openFindingForm=openFindingForm;window.deleteFinding=deleteFinding;window.openEquipmentForm=openEquipmentForm;window.deleteEquipment=deleteEquipment;window.openVgpTypeForm=openVgpTypeForm;window.deleteVgpType=deleteVgpType;window.exportVgpPlan=exportVgpPlan;window.handlePdfInput=handlePdfInput;window.startAiAnalysis=startAiAnalysis;window.acceptAiCandidate=acceptAiCandidate;window.editAiCandidate=editAiCandidate;window.closeModal=closeModal;window.filterPlan=filterPlan;
+window.go=go;window.toggleMenu=toggleMenu;window.render=render;window.quickNew=quickNew;window.backVgpHome=backVgpHome;window.openVgpType=openVgpType;window.openVgpPlan=openVgpPlan;window.openGlobalPlan=openGlobalPlan;window.openReport=openReport;window.openReportForm=openReportForm;window.deleteReport=deleteReport;window.openFindingForm=openFindingForm;window.deleteFinding=deleteFinding;window.openEquipmentForm=openEquipmentForm;window.deleteEquipment=deleteEquipment;window.openVgpTypeForm=openVgpTypeForm;window.openVgpObjectives=openVgpObjectives;window.deleteVgpType=deleteVgpType;window.exportVgpPlan=exportVgpPlan;window.handlePdfInput=handlePdfInput;window.startAiAnalysis=startAiAnalysis;window.acceptAiCandidate=acceptAiCandidate;window.editAiCandidate=editAiCandidate;window.closeModal=closeModal;window.filterPlan=filterPlan;
 window.quickImportPdf=quickImportPdf;window.runCompleteAi=runCompleteAi;window.reviewWithAi=reviewWithAi;window.acceptAllAiCandidates=acceptAllAiCandidates;window.openChemicalForm=openChemicalForm;window.openChemicalDetail=openChemicalDetail;window.openChemicalRequestForm=openChemicalRequestForm;window.openChemicalActionForm=openChemicalActionForm;window.filterChem=filterChem;window.saveChemicalSettings=saveChemicalSettings;window.exportChemicalCSV=exportChemicalCSV;window.saveAiSettings=saveAiSettings;window.toggleAiExternal=toggleAiExternal;window.testAi=testAi;window.testAiV2=testAiV2;window.showAiDiagnostic=showAiDiagnostic;window.analyzeWithAiEngine=analyzeWithAiEngine;window.addUnit=addUnit;window.removeUnit=removeUnit;window.addPerson=addPerson;window.removePerson=removePerson;window.resetAll=resetAll;window.exportJSON=exportJSON;window.importJSON=importJSON;window.addUnitInline=addUnitInline;
 </script>
 </body>
